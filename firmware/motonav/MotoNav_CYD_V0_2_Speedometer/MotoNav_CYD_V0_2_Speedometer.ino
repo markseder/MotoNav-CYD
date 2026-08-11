@@ -177,7 +177,7 @@ void setup() {
   tft.invertDisplay(true);
 
   speedSprite.setColorDepth(16);
-  if (speedSprite.createSprite(304, 118) == nullptr) {
+  if (speedSprite.createSprite(304, 100) == nullptr) {
     Serial.println("ERROR: speed sprite allocation failed");
   }
 
