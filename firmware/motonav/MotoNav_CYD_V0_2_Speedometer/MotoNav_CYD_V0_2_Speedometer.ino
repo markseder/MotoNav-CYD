@@ -77,23 +77,25 @@ void drawStaticScreen() {
   tft.drawString("MotoNav", 8, 6, 2);
   tft.drawFastHLine(8, 27, 304, divider);
 
+  // Compact unit label keeps the speed area visually dominant.
   tft.setTextDatum(MC_DATUM);
   tft.setTextColor(secondaryColor(), bg);
-  tft.drawString("km/h", 160, 151, 4);
+  tft.drawString("km/h", 160, 132, 2);
 
-  tft.drawFastHLine(8, 171, 304, divider);
-  tft.drawFastVLine(106, 178, 37, divider);
-  tft.drawFastVLine(213, 178, 37, divider);
+  // Compact footer: labels, values and theme hint each have their own row.
+  tft.drawFastHLine(8, 148, 304, divider);
+  tft.drawFastVLine(106, 155, 65, divider);
+  tft.drawFastVLine(213, 155, 65, divider);
 
   tft.setTextDatum(TC_DATUM);
   tft.setTextColor(secondaryColor(), bg);
-  tft.drawString("SAT", 54, 178, 2);
-  tft.drawString("HDOP", 160, 178, 2);
-  tft.drawString("UTC", 267, 178, 2);
+  tft.drawString("SAT", 54, 154, 2);
+  tft.drawString("HDOP", 160, 154, 2);
+  tft.drawString("UTC", 267, 154, 2);
 
   tft.setTextDatum(BC_DATUM);
   tft.setTextColor(accentColor(), bg);
-  tft.drawString(nightTheme ? "Tap: DAY" : "Tap: NIGHT", 160, 237, 2);
+  tft.drawString(nightTheme ? "TAP: DAY" : "TAP: NIGHT", 160, 237, 1);
 
   invalidateDynamicValues();
 }
@@ -117,8 +119,8 @@ void drawSpeed(bool fix, bool force) {
   speedSprite.fillSprite(backgroundColor());
   speedSprite.setTextDatum(MC_DATUM);
   speedSprite.setTextColor(primaryColor(), backgroundColor());
-  speedSprite.drawString(value, 152, 59, 8);
-  speedSprite.pushSprite(8, 31);
+  speedSprite.drawString(value, 152, 49, 8);
+  speedSprite.pushSprite(8, 29);
   previousSpeed = value;
 }
 
@@ -146,9 +148,9 @@ void updateDynamicScreen(bool force = false) {
       gps.hdop.isValid() ? String(gps.hdop.hdop(), 1) : "--";
   const String time = gnssTime();
 
-  drawFooterValue(satellites, previousSatellites, 54, 198, 84, 4, force);
-  drawFooterValue(hdop, previousHdop, 160, 198, 84, 4, force);
-  drawFooterValue(time, previousTime, 267, 201, 96, 2, force);
+  drawFooterValue(satellites, previousSatellites, 54, 174, 84, 4, force);
+  drawFooterValue(hdop, previousHdop, 160, 174, 84, 4, force);
+  drawFooterValue(time, previousTime, 267, 180, 96, 2, force);
 }
 
 void redrawTheme() {
