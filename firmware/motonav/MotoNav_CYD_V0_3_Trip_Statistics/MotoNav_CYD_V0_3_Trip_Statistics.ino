@@ -230,8 +230,8 @@ void drawSpeed(bool fix, bool force) {
   speedSprite.fillSprite(backgroundColor());
   speedSprite.setTextDatum(MC_DATUM);
   speedSprite.setTextColor(primaryColor(), backgroundColor());
-  speedSprite.drawString(value, 152, 39, 8);
-  speedSprite.pushSprite(8, 29);
+  speedSprite.drawString(value, 95, 39, 8);
+  speedSprite.pushSprite(65, 29);
   previousSpeed = value;
 }
 
@@ -266,8 +266,8 @@ void drawGaugeSpeed(bool fix, bool force) {
   speedSprite.fillSprite(backgroundColor());
   speedSprite.setTextDatum(MC_DATUM);
   speedSprite.setTextColor(primaryColor(), backgroundColor());
-  speedSprite.drawString(value, 152, 39, 8);
-  speedSprite.pushSprite(8, 83);
+  speedSprite.drawString(value, 95, 39, 8);
+  speedSprite.pushSprite(65, 83);
   previousSpeed = value;
 }
 
@@ -446,7 +446,7 @@ void setup() {
   tft.invertDisplay(true);
 
   speedSprite.setColorDepth(16);
-  if (speedSprite.createSprite(304, 82) == nullptr) {
+  if (speedSprite.createSprite(190, 82) == nullptr) {
     Serial.println("ERROR: speed sprite allocation failed");
   }
 
