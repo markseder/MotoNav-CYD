@@ -24,7 +24,7 @@ constexpr double MAX_SEGMENT_DISTANCE_M = 80.0;
 constexpr uint32_t MAX_POSITION_GAP_MS = 5000;
 constexpr uint32_t MAX_MOTION_SAMPLE_MS = 1000;
 
-constexpr double SPEED_SCREEN_ENTER_KMH = 20.0;
+constexpr double SPEED_SCREEN_ENTER_KMH = 5.0;
 constexpr double SPEED_SCREEN_EXIT_KMH = 1.0;
 constexpr uint32_t SPEED_SCREEN_ENTER_HOLD_MS = 800;
 constexpr uint32_t SPEED_SCREEN_EXIT_HOLD_MS = 3000;
