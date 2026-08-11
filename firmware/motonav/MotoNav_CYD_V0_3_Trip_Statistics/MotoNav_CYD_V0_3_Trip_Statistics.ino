@@ -21,6 +21,12 @@ uint32_t touchStartedMs = 0;
 bool touchWasDown = false;
 bool longPressHandled = false;
 
+enum ScreenMode { TRIP_SCREEN, SPEED_SCREEN };
+ScreenMode screenMode = TRIP_SCREEN;
+uint32_t speedThresholdStartedMs = 0;
+uint32_t stoppedStartedMs = 0;
+int previousGaugeTick = -1;
+
 bool tripActive = false;
 bool havePreviousPosition = false;
 double previousLatitude = 0.0;
@@ -38,6 +44,12 @@ String previousTrip;
 String previousAverage;
 String previousMaximum;
 String previousTimes;
+
+constexpr int16_t GAUGE_CX = 160;
+constexpr int16_t GAUGE_CY = 125;
+constexpr int16_t GAUGE_OUTER_R = 108;
+constexpr int16_t GAUGE_INNER_R = 96;
+constexpr int GAUGE_TICK_COUNT = 32;
 
 uint16_t backgroundColor() { return nightTheme ? TFT_BLACK : TFT_WHITE; }
 uint16_t primaryColor() { return nightTheme ? TFT_WHITE : TFT_BLACK; }
@@ -110,6 +122,57 @@ void invalidateDynamicValues() {
   previousAverage = "";
   previousMaximum = "";
   previousTimes = "";
+}
+
+void drawGaugeTick(int tick, bool active) {
+  const float angleDeg = 135.0f + (270.0f * tick / GAUGE_TICK_COUNT);
+  const float angle = angleDeg * DEG_TO_RAD;
+  const bool major = (tick % 8) == 0;
+  const int16_t innerR = major ? GAUGE_INNER_R - 7 : GAUGE_INNER_R;
+  const int16_t x0 = GAUGE_CX + cosf(angle) * innerR;
+  const int16_t y0 = GAUGE_CY + sinf(angle) * innerR;
+  const int16_t x1 = GAUGE_CX + cosf(angle) * GAUGE_OUTER_R;
+  const int16_t y1 = GAUGE_CY + sinf(angle) * GAUGE_OUTER_R;
+  const uint16_t inactive = nightTheme ? TFT_DARKGREY : TFT_LIGHTGREY;
+  tft.drawLine(x0, y0, x1, y1, active ? accentColor() : inactive);
+  if (major) {
+    const int speedMark = tick * 5;
+    const int16_t labelR = GAUGE_INNER_R - 19;
+    const int16_t lx = GAUGE_CX + cosf(angle) * labelR;
+    const int16_t ly = GAUGE_CY + sinf(angle) * labelR;
+    tft.setTextDatum(MC_DATUM);
+    tft.setTextColor(active ? accentColor() : secondaryColor(), backgroundColor());
+    tft.drawString(String(speedMark), lx, ly, 1);
+  }
+}
+
+int gaugeTickForSpeed(double speed) {
+  const double limited = constrain(speed, 0.0, 160.0);
+  return static_cast<int>(round(limited / 5.0));
+}
+
+void drawGaugeScale(bool force = false) {
+  const int currentTick = gaugeTickForSpeed(filteredSpeedKmh(validFix()));
+  if (!force && currentTick == previousGaugeTick) return;
+  for (int tick = 0; tick <= GAUGE_TICK_COUNT; ++tick) {
+    drawGaugeTick(tick, tick <= currentTick);
+  }
+  previousGaugeTick = currentTick;
+}
+
+void drawSpeedometerStatic() {
+  const uint16_t bg = backgroundColor();
+  tft.fillScreen(bg);
+  tft.drawRoundRect(3, 3, 314, 234, 8, nightTheme ? TFT_DARKGREY : TFT_LIGHTGREY);
+  tft.setTextDatum(TC_DATUM);
+  tft.setTextColor(secondaryColor(), bg);
+  tft.drawString("SPEED", 160, 8, 2);
+  tft.setTextDatum(MC_DATUM);
+  tft.drawString("KM/h", 160, 181, 2);
+  previousGaugeTick = -1;
+  previousSpeed = "";
+  previousStatus = "";
+  drawGaugeScale(true);
 }
 
 void drawStaticScreen() {
@@ -197,8 +260,24 @@ void drawTimes(bool force) {
   previousTimes = value;
 }
 
+void drawGaugeSpeed(bool fix, bool force) {
+  const String value = speedText(fix);
+  if (!force && value == previousSpeed) return;
+  speedSprite.fillSprite(backgroundColor());
+  speedSprite.setTextDatum(MC_DATUM);
+  speedSprite.setTextColor(primaryColor(), backgroundColor());
+  speedSprite.drawString(value, 152, 39, 8);
+  speedSprite.pushSprite(8, 83);
+  previousSpeed = value;
+}
+
 void updateDynamicScreen(bool force = false) {
   const bool fix = validFix();
+  if (screenMode == SPEED_SCREEN) {
+    drawGaugeScale(force);
+    drawGaugeSpeed(fix, force);
+    return;
+  }
   drawStatus(fix, force);
   drawSpeed(fix, force);
   drawStatistic(distanceText(), previousTrip, 54, force);
@@ -282,9 +361,51 @@ void resetTrip() {
   updateDynamicScreen(true);
 }
 
-void redrawTheme() {
+void showTripScreen() {
+  screenMode = TRIP_SCREEN;
   drawStaticScreen();
   updateDynamicScreen(true);
+}
+
+void showSpeedScreen() {
+  screenMode = SPEED_SCREEN;
+  drawSpeedometerStatic();
+  updateDynamicScreen(true);
+}
+
+void redrawTheme() {
+  if (screenMode == SPEED_SCREEN) showSpeedScreen();
+  else showTripScreen();
+}
+
+void updateAutomaticScreenMode() {
+  const uint32_t now = millis();
+  const double speed = filteredSpeedKmh(validFix());
+
+  if (screenMode == TRIP_SCREEN) {
+    stoppedStartedMs = 0;
+    if (speed >= SPEED_SCREEN_ENTER_KMH) {
+      if (speedThresholdStartedMs == 0) speedThresholdStartedMs = now;
+      if (now - speedThresholdStartedMs >= SPEED_SCREEN_ENTER_HOLD_MS) {
+        speedThresholdStartedMs = 0;
+        showSpeedScreen();
+      }
+    } else {
+      speedThresholdStartedMs = 0;
+    }
+    return;
+  }
+
+  speedThresholdStartedMs = 0;
+  if (speed <= SPEED_SCREEN_EXIT_KMH) {
+    if (stoppedStartedMs == 0) stoppedStartedMs = now;
+    if (now - stoppedStartedMs >= SPEED_SCREEN_EXIT_HOLD_MS) {
+      stoppedStartedMs = 0;
+      showTripScreen();
+    }
+  } else {
+    stoppedStartedMs = 0;
+  }
 }
 
 void handleTouch() {
@@ -334,7 +455,7 @@ void setup() {
   touch.setRotation(1);
 
   gnssSerial.begin(GNSS_BAUD, SERIAL_8N1, GNSS_RX_PIN, GNSS_TX_PIN);
-  redrawTheme();
+  showTripScreen();
 }
 
 void loop() {
@@ -347,6 +468,7 @@ void loop() {
 
   handleTouch();
   updateTripStatistics();
+  updateAutomaticScreenMode();
 
   if (millis() - lastScreenMs >= SCREEN_REFRESH_MS) {
     lastScreenMs = millis();
