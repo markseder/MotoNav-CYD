@@ -188,7 +188,8 @@ void drawTimes(bool force) {
                        durationText(movingTimeMs);
   if (!force && value == previousTimes) return;
   const uint16_t bg = backgroundColor();
-  // Keep the time refresh area clear of the footer hints at y=229.\n  tft.fillRect(8, 204, 304, 23, bg);
+  // Keep the time refresh area clear of the footer hints at y=229.
+  tft.fillRect(8, 204, 304, 23, bg);
   tft.setTextDatum(TC_DATUM);
   tft.setTextColor(primaryColor(), bg);
   tft.drawString(durationText(totalTimeMs()), 76, 205, 2);
