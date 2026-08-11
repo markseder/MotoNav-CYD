@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document>
+<name>MotoNav-CYD V0.1 diagnostic</name>
+<Placemark><name>First valid GNSS fix</name>
+<description>Satellites: 4; HDOP: 5.7</description>
+<Point><coordinates>
+150.8131038,59.5661227,138.10</coordinates></Point></Placemark>
+</Document></kml>
