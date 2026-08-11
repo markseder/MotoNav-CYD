@@ -48,7 +48,9 @@ String previousTimes;
 constexpr int16_t GAUGE_CX = 160;
 constexpr int16_t GAUGE_CY = 125;
 constexpr int16_t GAUGE_OUTER_R = 108;
-constexpr int16_t GAUGE_INNER_R = 96;
+constexpr int16_t GAUGE_INNER_R = 90;
+constexpr int16_t GAUGE_LABEL_R = 72;
+constexpr float GAUGE_SEGMENT_HALF_ANGLE_DEG = 3.6f;
 constexpr int GAUGE_TICK_COUNT = 32;
 
 uint16_t backgroundColor() { return nightTheme ? TFT_BLACK : TFT_WHITE; }
@@ -125,21 +127,34 @@ void invalidateDynamicValues() {
 }
 
 void drawGaugeTick(int tick, bool active) {
-  const float angleDeg = 135.0f + (270.0f * tick / GAUGE_TICK_COUNT);
-  const float angle = angleDeg * DEG_TO_RAD;
-  const bool major = (tick % 8) == 0;
-  const int16_t innerR = major ? GAUGE_INNER_R - 7 : GAUGE_INNER_R;
-  const int16_t x0 = GAUGE_CX + cosf(angle) * innerR;
-  const int16_t y0 = GAUGE_CY + sinf(angle) * innerR;
-  const int16_t x1 = GAUGE_CX + cosf(angle) * GAUGE_OUTER_R;
-  const int16_t y1 = GAUGE_CY + sinf(angle) * GAUGE_OUTER_R;
-  const uint16_t inactive = nightTheme ? TFT_DARKGREY : TFT_LIGHTGREY;
-  tft.drawLine(x0, y0, x1, y1, active ? accentColor() : inactive);
-  if (major) {
+  const float centerDeg = 135.0f + (270.0f * tick / GAUGE_TICK_COUNT);
+  const float startAngle = (centerDeg - GAUGE_SEGMENT_HALF_ANGLE_DEG) * DEG_TO_RAD;
+  const float endAngle = (centerDeg + GAUGE_SEGMENT_HALF_ANGLE_DEG) * DEG_TO_RAD;
+
+  const int16_t outerStartX = GAUGE_CX + cosf(startAngle) * GAUGE_OUTER_R;
+  const int16_t outerStartY = GAUGE_CY + sinf(startAngle) * GAUGE_OUTER_R;
+  const int16_t outerEndX = GAUGE_CX + cosf(endAngle) * GAUGE_OUTER_R;
+  const int16_t outerEndY = GAUGE_CY + sinf(endAngle) * GAUGE_OUTER_R;
+  const int16_t innerStartX = GAUGE_CX + cosf(startAngle) * GAUGE_INNER_R;
+  const int16_t innerStartY = GAUGE_CY + sinf(startAngle) * GAUGE_INNER_R;
+  const int16_t innerEndX = GAUGE_CX + cosf(endAngle) * GAUGE_INNER_R;
+  const int16_t innerEndY = GAUGE_CY + sinf(endAngle) * GAUGE_INNER_R;
+
+  const uint16_t inactive = nightTheme ? tft.color565(30, 40, 48)
+                                        : tft.color565(190, 200, 205);
+  const uint16_t color = active ? accentColor() : inactive;
+
+  // Two triangles form one thick annular segment.
+  tft.fillTriangle(outerStartX, outerStartY, outerEndX, outerEndY,
+                   innerStartX, innerStartY, color);
+  tft.fillTriangle(innerStartX, innerStartY, outerEndX, outerEndY,
+                   innerEndX, innerEndY, color);
+
+  if ((tick % 8) == 0) {
+    const float centerAngle = centerDeg * DEG_TO_RAD;
     const int speedMark = tick * 5;
-    const int16_t labelR = GAUGE_INNER_R - 19;
-    const int16_t lx = GAUGE_CX + cosf(angle) * labelR;
-    const int16_t ly = GAUGE_CY + sinf(angle) * labelR;
+    const int16_t lx = GAUGE_CX + cosf(centerAngle) * GAUGE_LABEL_R;
+    const int16_t ly = GAUGE_CY + sinf(centerAngle) * GAUGE_LABEL_R;
     tft.setTextDatum(MC_DATUM);
     tft.setTextColor(active ? accentColor() : secondaryColor(), backgroundColor());
     tft.drawString(String(speedMark), lx, ly, 1);
@@ -269,6 +284,9 @@ void drawGaugeSpeed(bool fix, bool force) {
   speedSprite.drawString(value, 95, 39, 8);
   speedSprite.pushSprite(65, 83);
   previousSpeed = value;
+
+  // The speed sprite overlaps the gauge edges; restore the thick arc afterward.
+  drawGaugeScale(true);
 }
 
 void updateDynamicScreen(bool force = false) {
