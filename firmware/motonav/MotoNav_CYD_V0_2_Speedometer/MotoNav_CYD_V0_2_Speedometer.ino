@@ -7,6 +7,7 @@
 #include "config.h"
 
 TFT_eSPI tft;
+TFT_eSprite speedSprite(&tft);
 TinyGPSPlus gps;
 HardwareSerial gnssSerial(GNSS_UART_NUMBER);
 SPIClass touchSpi(HSPI);
@@ -17,6 +18,12 @@ uint32_t nmeaChars = 0;
 uint32_t lastNmeaByteMs = 0;
 uint32_t lastScreenMs = 0;
 uint32_t lastTouchMs = 0;
+
+String previousStatus;
+String previousSpeed;
+String previousSatellites;
+String previousHdop;
+String previousTime;
 
 uint16_t backgroundColor() { return nightTheme ? TFT_BLACK : TFT_WHITE; }
 uint16_t primaryColor() { return nightTheme ? TFT_WHITE : TFT_BLACK; }
@@ -31,6 +38,11 @@ bool validFix() {
   return gps.location.isValid() && gps.location.age() < GNSS_DATA_TIMEOUT_MS;
 }
 
+String gnssStatus(bool fix) {
+  if (fix) return "GNSS FIX";
+  return nmeaActive() ? "SEARCHING" : "NO DATA";
+}
+
 String gnssTime() {
   if (!gps.time.isValid()) return "--:--:--";
   char value[9];
@@ -39,36 +51,36 @@ String gnssTime() {
   return String(value);
 }
 
-void drawHeader(bool fix) {
-  const uint16_t bg = backgroundColor();
-  tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(accentColor(), bg);
-  tft.drawString("MotoNav", 8, 6, 2);
-
-  tft.setTextDatum(TR_DATUM);
-  tft.setTextColor(fix ? TFT_GREEN : TFT_ORANGE, bg);
-  tft.drawString(fix ? "GNSS FIX" : (nmeaActive() ? "SEARCHING" : "NO DATA"), 312, 6, 2);
-  tft.drawFastHLine(8, 27, 304, nightTheme ? TFT_DARKGREY : TFT_LIGHTGREY);
-}
-
-void drawSpeed(bool fix) {
-  const uint16_t bg = backgroundColor();
+String speedText(bool fix) {
   double speed = 0.0;
   if (fix && gps.speed.isValid()) speed = gps.speed.kmph();
   if (speed < SPEED_NOISE_FLOOR_KMH) speed = 0.0;
+  return speed < 100.0 ? String(speed, 1) : String(speed, 0);
+}
 
-  tft.setTextDatum(MC_DATUM);
-  tft.setTextColor(primaryColor(), bg);
-  tft.drawFloat(speed, speed < 100.0 ? 1 : 0, 160, 92, 7);
+void invalidateDynamicValues() {
+  previousStatus = "";
+  previousSpeed = "";
+  previousSatellites = "";
+  previousHdop = "";
+  previousTime = "";
+}
+
+void drawStaticScreen() {
+  const uint16_t bg = backgroundColor();
+  const uint16_t divider = nightTheme ? TFT_DARKGREY : TFT_LIGHTGREY;
+
+  tft.fillScreen(bg);
+
+  tft.setTextDatum(TL_DATUM);
+  tft.setTextColor(accentColor(), bg);
+  tft.drawString("MotoNav", 8, 6, 2);
+  tft.drawFastHLine(8, 27, 304, divider);
 
   tft.setTextDatum(MC_DATUM);
   tft.setTextColor(secondaryColor(), bg);
-  tft.drawString("km/h", 160, 143, 4);
-}
+  tft.drawString("km/h", 160, 151, 4);
 
-void drawFooter(bool fix) {
-  const uint16_t bg = backgroundColor();
-  const uint16_t divider = nightTheme ? TFT_DARKGREY : TFT_LIGHTGREY;
   tft.drawFastHLine(8, 171, 304, divider);
   tft.drawFastVLine(106, 178, 37, divider);
   tft.drawFastVLine(213, 178, 37, divider);
@@ -79,22 +91,69 @@ void drawFooter(bool fix) {
   tft.drawString("HDOP", 160, 178, 2);
   tft.drawString("UTC", 267, 178, 2);
 
-  tft.setTextColor(primaryColor(), bg);
-  tft.drawString(gps.satellites.isValid() ? String(gps.satellites.value()) : "--", 54, 198, 4);
-  tft.drawString(gps.hdop.isValid() ? String(gps.hdop.hdop(), 1) : "--", 160, 198, 4);
-  tft.drawString(gnssTime(), 267, 201, 2);
-
   tft.setTextDatum(BC_DATUM);
   tft.setTextColor(accentColor(), bg);
   tft.drawString(nightTheme ? "Tap: DAY" : "Tap: NIGHT", 160, 237, 2);
+
+  invalidateDynamicValues();
 }
 
-void drawScreen() {
+void drawStatus(bool fix, bool force) {
+  const String status = gnssStatus(fix);
+  if (!force && status == previousStatus) return;
+
+  const uint16_t bg = backgroundColor();
+  tft.fillRect(190, 4, 122, 21, bg);
+  tft.setTextDatum(TR_DATUM);
+  tft.setTextColor(fix ? TFT_GREEN : TFT_ORANGE, bg);
+  tft.drawString(status, 312, 6, 2);
+  previousStatus = status;
+}
+
+void drawSpeed(bool fix, bool force) {
+  const String value = speedText(fix);
+  if (!force && value == previousSpeed) return;
+
+  speedSprite.fillSprite(backgroundColor());
+  speedSprite.setTextDatum(MC_DATUM);
+  speedSprite.setTextColor(primaryColor(), backgroundColor());
+  speedSprite.drawString(value, 152, 59, 8);
+  speedSprite.pushSprite(8, 31);
+  previousSpeed = value;
+}
+
+void drawFooterValue(const String &value, String &previous,
+                     int16_t centerX, int16_t y, int16_t width,
+                     uint8_t font, bool force) {
+  if (!force && value == previous) return;
+
+  const uint16_t bg = backgroundColor();
+  tft.fillRect(centerX - width / 2, y, width, 30, bg);
+  tft.setTextDatum(TC_DATUM);
+  tft.setTextColor(primaryColor(), bg);
+  tft.drawString(value, centerX, y, font);
+  previous = value;
+}
+
+void updateDynamicScreen(bool force = false) {
   const bool fix = validFix();
-  tft.fillScreen(backgroundColor());
-  drawHeader(fix);
-  drawSpeed(fix);
-  drawFooter(fix);
+  drawStatus(fix, force);
+  drawSpeed(fix, force);
+
+  const String satellites =
+      gps.satellites.isValid() ? String(gps.satellites.value()) : "--";
+  const String hdop =
+      gps.hdop.isValid() ? String(gps.hdop.hdop(), 1) : "--";
+  const String time = gnssTime();
+
+  drawFooterValue(satellites, previousSatellites, 54, 198, 84, 4, force);
+  drawFooterValue(hdop, previousHdop, 160, 198, 84, 4, force);
+  drawFooterValue(time, previousTime, 267, 201, 96, 2, force);
+}
+
+void redrawTheme() {
+  drawStaticScreen();
+  updateDynamicScreen(true);
 }
 
 void handleTouch() {
@@ -102,7 +161,7 @@ void handleTouch() {
   touch.getPoint();
   lastTouchMs = millis();
   nightTheme = !nightTheme;
-  drawScreen();
+  redrawTheme();
 }
 
 void setup() {
@@ -114,14 +173,18 @@ void setup() {
   tft.init();
   tft.setRotation(1);
   tft.invertDisplay(true);
-  tft.fillScreen(TFT_BLACK);
+
+  speedSprite.setColorDepth(16);
+  if (speedSprite.createSprite(304, 118) == nullptr) {
+    Serial.println("ERROR: speed sprite allocation failed");
+  }
 
   touchSpi.begin(TOUCH_CLK_PIN, TOUCH_MISO_PIN, TOUCH_MOSI_PIN, TOUCH_CS_PIN);
   touch.begin(touchSpi);
   touch.setRotation(1);
 
   gnssSerial.begin(GNSS_BAUD, SERIAL_8N1, GNSS_RX_PIN, GNSS_TX_PIN);
-  drawScreen();
+  redrawTheme();
 }
 
 void loop() {
@@ -136,6 +199,6 @@ void loop() {
 
   if (millis() - lastScreenMs >= SCREEN_REFRESH_MS) {
     lastScreenMs = millis();
-    drawScreen();
+    updateDynamicScreen();
   }
 }
