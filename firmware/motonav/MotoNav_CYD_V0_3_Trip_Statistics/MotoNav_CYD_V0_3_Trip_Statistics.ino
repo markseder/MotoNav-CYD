@@ -141,10 +141,11 @@ void drawStaticScreen() {
   tft.drawString("TOTAL", 12, 193, 1);
   tft.drawString("MOVING", 166, 193, 1);
 
-  tft.setTextDatum(BC_DATUM);
   tft.setTextColor(accentColor(), bg);
-  tft.drawString(nightTheme ? "TAP: DAY   HOLD: RESET" :
-                              "TAP: NIGHT   HOLD: RESET", 160, 237, 1);
+  tft.setTextDatum(BL_DATUM);
+  tft.drawString(nightTheme ? "TAP: DAY" : "TAP: NIGHT", 12, 237, 1);
+  tft.setTextDatum(BR_DATUM);
+  tft.drawString("HOLD: RESET", 308, 237, 1);
 
   invalidateDynamicValues();
 }
