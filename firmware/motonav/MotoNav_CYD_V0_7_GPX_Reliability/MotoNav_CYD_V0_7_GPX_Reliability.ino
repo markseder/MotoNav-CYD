@@ -357,8 +357,8 @@ void drawStopRecordReminder() {
   tft.fillScreen(TFT_BLACK);
   tft.setTextDatum(MC_DATUM);
   tft.setTextColor(TFT_RED, TFT_BLACK);
-  tft.drawString("STOP", 160, 82, 7);
-  tft.drawString("RECORD?", 160, 145, 6);
+  tft.drawString("STOP", 160, 78, 4);
+  tft.drawString("RECORD?", 160, 138, 4);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.drawString("TAP TO OPEN MENU", 160, 211, 2);
 }
