@@ -21,9 +21,10 @@ Preferences preferences;
 
 bool nightTheme = true;
 bool useMph = false;
-bool autoTrackStart = false;
-bool autoStartArmed = true;
-uint32_t autoStartThresholdMs = 0;
+bool sdError = false;
+bool savedNotice = false;
+uint32_t savedNoticeMs = 0;
+uint32_t savedPointCount = 0;
 uint32_t nmeaChars = 0;
 uint32_t lastNmeaByteMs = 0;
 uint32_t lastScreenMs = 0;
@@ -33,24 +34,13 @@ bool longPressHandled = false;
 
 enum UiMode { DRIVE_UI, MENU_UI, SETTINGS_UI };
 UiMode uiMode = DRIVE_UI;
-enum TrackState { TRACK_STOPPED, TRACK_WAIT_FIX, TRACK_RECORDING, TRACK_AUTO_PAUSED };
+enum TrackState { TRACK_STOPPED, TRACK_WAIT_FIX, TRACK_RECORDING };
 TrackState trackState = TRACK_STOPPED;
 bool sdReady = false;
 uint32_t lastTrackPointMs = 0;
 uint32_t lastTrackFlushMs = 0;
-uint32_t lastTrackMotionMs = 0;
 uint32_t trackPointCount = 0;
 String trackFileName;
-
-enum SdError { SD_OK, SD_NOT_FOUND, SD_CREATE_ERROR, SD_WRITE_ERROR, SD_REMOVED };
-SdError sdError = SD_OK;
-constexpr const char *ACTIVE_TRACK_MARKER = "/MOTONAV.ACT";
-bool trackRecoveredNotice = false;
-uint32_t trackRecoveredNoticeMs = 0;
-bool haveLastTrackPoint = false;
-double lastTrackLatitude = 0.0;
-double lastTrackLongitude = 0.0;
-uint32_t lastAcceptedTrackPointMs = 0;
 
 constexpr int16_t TOUCH_X_MIN = 250;
 constexpr int16_t TOUCH_X_MAX = 3850;
@@ -104,67 +94,42 @@ const char *distanceUnitText() { return useMph ? "mi" : "km"; }
 void saveSettings() {
   preferences.putBool("night", nightTheme);
   preferences.putBool("mph", useMph);
-  preferences.putBool("autoTrack", autoTrackStart);
 }
 
 void loadSettings() {
   preferences.begin("motonav", false);
   nightTheme = preferences.getBool("night", true);
   useMph = preferences.getBool("mph", false);
-  autoTrackStart = preferences.getBool("autoTrack", false);
 }
 
 const char *trackStateText() {
   switch (trackState) {
-    case TRACK_WAIT_FIX: return "NO FIX";
+    case TRACK_WAIT_FIX: return "WAIT FIX";
     case TRACK_RECORDING: return "REC";
-    case TRACK_AUTO_PAUSED: return "PAUSE";
     default: return "STOP";
-  }
-}
-
-const char *sdErrorText() {
-  switch (sdError) {
-    case SD_NOT_FOUND: return "NO SD";
-    case SD_CREATE_ERROR: return "SD CREATE";
-    case SD_WRITE_ERROR: return "SD WRITE";
-    case SD_REMOVED: return "SD REMOVED";
-    default: return "SD ERR";
   }
 }
 
 void drawTrackBadge() {
   if (uiMode != DRIVE_UI) return;
   const uint16_t bg = backgroundColor();
-  String badge;
+  String badge = "STOP";
   uint16_t color = secondaryColor();
 
-  if (sdError != SD_OK) {
-    badge = sdErrorText();
+  if (sdError) {
+    badge = "SD ERROR";
     color = TFT_RED;
-  } else if (trackRecoveredNotice &&
-             millis() - trackRecoveredNoticeMs < TRACK_RECOVERED_NOTICE_MS) {
-    badge = "RECOVERED";
-    color = TFT_GREEN;
-  } else if ((trackState == TRACK_RECORDING ||
-              trackState == TRACK_AUTO_PAUSED) && !validFix()) {
-    badge = "NO FIX";
-    color = TFT_YELLOW;
   } else if (trackState == TRACK_RECORDING) {
     badge = String("REC ") + String(trackPointCount);
     color = TFT_RED;
-  } else if (trackState == TRACK_AUTO_PAUSED) {
-    badge = "PAUSE";
-    color = TFT_ORANGE;
   } else if (trackState == TRACK_WAIT_FIX) {
-    badge = "NO FIX";
+    badge = "WAIT FIX";
     color = TFT_YELLOW;
-  } else if (autoTrackStart && autoStartArmed) {
-    badge = "AUTO ARMED";
-    color = TFT_CYAN;
-  } else {
-    badge = "STOP";
+  } else if (savedNotice && millis() - savedNoticeMs < 5000UL) {
+    badge = String("SAVED ") + String(savedPointCount);
+    color = TFT_GREEN;
   }
+
   const int16_t badgeX = screenMode == SPEED_SCREEN ? 4 : 104;
   const int16_t badgeCenter = screenMode == SPEED_SCREEN ? 45 : 150;
   tft.fillRect(badgeX, 4, 92, 21, bg);
@@ -173,87 +138,13 @@ void drawTrackBadge() {
   tft.drawString(badge, badgeCenter, 6, 2);
 }
 
-void setSdError(SdError error, const char *message) {
-  sdError = error;
-  sdReady = false;
-  Serial.println(message);
-  if (trackFile) trackFile.close();
-  if (trackState == TRACK_RECORDING || trackState == TRACK_AUTO_PAUSED) {
-    trackState = TRACK_STOPPED;
-  }
-  drawTrackBadge();
-}
-
 bool initializeSd() {
   if (sdReady) return true;
   sdSpi.begin(SD_SCK_PIN, SD_MISO_PIN, SD_MOSI_PIN, SD_CS_PIN);
-  if (!SD.begin(SD_CS_PIN, sdSpi) || SD.cardType() == CARD_NONE) {
-    setSdError(SD_NOT_FOUND, "ERROR: microSD not found");
-    return false;
-  }
-  sdReady = true;
-  sdError = SD_OK;
-  Serial.println("microSD ready");
-  return true;
-}
-
-bool writeActiveTrackMarker() {
-  SD.remove(ACTIVE_TRACK_MARKER);
-  File marker = SD.open(ACTIVE_TRACK_MARKER, FILE_WRITE);
-  if (!marker) return false;
-  const size_t written = marker.println(trackFileName);
-  marker.flush();
-  const bool ok = written >= trackFileName.length() + 1 &&
-                  !marker.getWriteError();
-  marker.close();
-  return ok;
-}
-
-bool recoverInterruptedTrack() {
-  if (!sdReady || !SD.exists(ACTIVE_TRACK_MARKER)) return false;
-  File marker = SD.open(ACTIVE_TRACK_MARKER, FILE_READ);
-  if (!marker) return false;
-  String interruptedName = marker.readStringUntil('\n');
-  marker.close();
-  interruptedName.trim();
-
-  if (!interruptedName.startsWith("/") ||
-      !interruptedName.endsWith(".GPX") ||
-      !SD.exists(interruptedName)) {
-    SD.remove(ACTIVE_TRACK_MARKER);
-    return false;
-  }
-
-  File interrupted = SD.open(interruptedName, FILE_READ);
-  if (!interrupted) return false;
-  const size_t fileSize = interrupted.size();
-  const size_t tailStart = fileSize > 96 ? fileSize - 96 : 0;
-  interrupted.seek(tailStart);
-  String tail = interrupted.readString();
-  interrupted.close();
-
-  bool recovered = tail.indexOf("</gpx>") >= 0;
-  if (!recovered) {
-    interrupted = SD.open(interruptedName, FILE_APPEND);
-    if (!interrupted) {
-      setSdError(SD_WRITE_ERROR, "ERROR: interrupted GPX recovery failed");
-      return false;
-    }
-    const size_t before = interrupted.size();
-    interrupted.println("  </trkseg></trk>");
-    interrupted.println("</gpx>");
-    interrupted.flush();
-    recovered = !interrupted.getWriteError() && interrupted.size() > before;
-    interrupted.close();
-  }
-
-  if (recovered) {
-    SD.remove(ACTIVE_TRACK_MARKER);
-    trackRecoveredNotice = true;
-    trackRecoveredNoticeMs = millis();
-    Serial.printf("Recovered interrupted track: %s\n", interruptedName.c_str());
-  }
-  return recovered;
+  sdReady = SD.begin(SD_CS_PIN, sdSpi) && SD.cardType() != CARD_NONE;
+  sdError = !sdReady;
+  Serial.println(sdReady ? "microSD ready" : "ERROR: microSD initialization failed");
+  return sdReady;
 }
 
 String makeTrackFileName() {
@@ -270,120 +161,76 @@ String makeTrackFileName() {
 }
 
 bool openTrackFile() {
-  if (!initializeSd()) return false;
+  sdError = false;
+  if (!initializeSd()) {
+    drawTrackBadge();
+    return false;
+  }
   trackFileName = makeTrackFileName();
   trackFile = SD.open(trackFileName, FILE_WRITE);
   if (!trackFile) {
-    setSdError(SD_CREATE_ERROR, "ERROR: GPX file creation failed");
+    sdError = true;
+    drawTrackBadge();
     return false;
   }
   trackFile.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
   trackFile.println("<gpx version=\"1.1\" creator=\"MotoNav-CYD\" xmlns=\"http://www.topografix.com/GPX/1/1\">");
   trackFile.println("  <trk><name>MotoNav ride</name><trkseg>");
   trackFile.flush();
-  if (trackFile.getWriteError() || trackFile.size() == 0 ||
-      !writeActiveTrackMarker()) {
+  if (trackFile.getWriteError()) {
     trackFile.close();
-    setSdError(SD_WRITE_ERROR, "ERROR: GPX header or recovery marker write failed");
+    sdError = true;
+    drawTrackBadge();
     return false;
   }
   lastTrackFlushMs = millis();
   lastTrackPointMs = 0;
   trackPointCount = 0;
-  haveLastTrackPoint = false;
-  lastAcceptedTrackPointMs = 0;
+  savedNotice = false;
   return true;
 }
 
 void startTrack() {
   if (trackState != TRACK_STOPPED) return;
+  sdError = false;
+  savedNotice = false;
   if (!validFix()) {
     trackState = TRACK_WAIT_FIX;
   } else {
     trackState = openTrackFile() ? TRACK_RECORDING : TRACK_STOPPED;
-    lastTrackMotionMs = millis();
   }
   drawTrackBadge();
 }
 
 void finishTrack() {
+  bool savedOk = false;
   if (trackFile) {
     trackFile.println("  </trkseg></trk>");
     trackFile.println("</gpx>");
     trackFile.flush();
-    const bool closeOk = !trackFile.getWriteError();
+    savedOk = !trackFile.getWriteError();
     trackFile.close();
-    if (closeOk && sdReady) SD.remove(ACTIVE_TRACK_MARKER);
-    else setSdError(SD_WRITE_ERROR, "ERROR: GPX finalization failed");
   }
+  savedPointCount = trackPointCount;
+  savedNotice = savedOk;
+  savedNoticeMs = millis();
+  sdError = !savedOk && trackPointCount > 0;
   trackState = TRACK_STOPPED;
   lastTrackPointMs = 0;
-  if (autoTrackStart && filteredSpeedKmh(validFix()) >= SPEED_SCREEN_ENTER_KMH) {
-    autoStartArmed = false;
-  }
   drawTrackBadge();
-}
-
-bool trackPointIsReliable(uint32_t now, double latitude, double longitude,
-                          double speedKmh) {
-  if (!isfinite(latitude) || !isfinite(longitude) ||
-      latitude < -90.0 || latitude > 90.0 ||
-      longitude < -180.0 || longitude > 180.0 ||
-      speedKmh > MAX_VALID_SPEED_KMH) return false;
-  if (gps.hdop.isValid() && gps.hdop.hdop() > MAX_HDOP_FOR_TRACK) return false;
-  if (gps.satellites.isValid() &&
-      gps.satellites.value() < MIN_SATELLITES_FOR_TRACK) return false;
-
-  if (!haveLastTrackPoint) return true;
-  const uint32_t gapMs = now - lastAcceptedTrackPointMs;
-  const double segmentM = TinyGPSPlus::distanceBetween(
-      lastTrackLatitude, lastTrackLongitude, latitude, longitude);
-  if (segmentM < MIN_TRACK_POINT_DISTANCE_M &&
-      speedKmh < TRACK_MOVING_THRESHOLD_KMH) return false;
-  if (gapMs == 0) return false;
-  const double impliedSpeedKmh = segmentM * 3600.0 / gapMs;
-  if (gapMs <= MAX_TRACK_POINT_GAP_MS &&
-      (segmentM > MAX_TRACK_SEGMENT_DISTANCE_M ||
-       impliedSpeedKmh > MAX_VALID_SPEED_KMH)) return false;
-  return true;
 }
 
 void writeTrackPoint(bool locationUpdated, double latitude, double longitude) {
   if (trackState == TRACK_WAIT_FIX && validFix()) {
     trackState = openTrackFile() ? TRACK_RECORDING : TRACK_STOPPED;
-    lastTrackMotionMs = millis();
     drawTrackBadge();
   }
-  if ((trackState != TRACK_RECORDING && trackState != TRACK_AUTO_PAUSED) ||
-      !validFix()) return;
+  if (trackState != TRACK_RECORDING || !validFix()) return;
 
   const uint32_t now = millis();
-  const double speed = filteredSpeedKmh(true);
-  if (speed >= TRACK_MOVING_THRESHOLD_KMH) {
-    lastTrackMotionMs = now;
-    if (trackState == TRACK_AUTO_PAUSED) {
-      trackState = TRACK_RECORDING;
-      drawTrackBadge();
-    }
-  } else if (trackState == TRACK_RECORDING &&
-             now - lastTrackMotionMs >= TRACK_AUTO_PAUSE_MS) {
-    trackState = TRACK_AUTO_PAUSED;
-    drawTrackBadge();
-  }
-
-  if (trackState != TRACK_RECORDING || !locationUpdated ||
+  if (!locationUpdated ||
       now - lastTrackPointMs + 100UL < TRACK_POINT_INTERVAL_MS) return;
-  if (!sdReady || !trackFile) {
-    setSdError(SD_REMOVED, "ERROR: microSD removed while recording");
-    return;
-  }
-  if (!trackPointIsReliable(now, latitude, longitude, speed)) {
-    Serial.println("GPX point rejected by reliability filter");
-    return;
-  }
 
-  const size_t sizeBefore = trackFile.size();
-  trackFile.clearWriteError();
   trackFile.printf("    <trkpt lat=\"%.7f\" lon=\"%.7f\">\n",
                    latitude, longitude);
   if (gps.altitude.isValid()) {
@@ -395,16 +242,16 @@ void writeTrackPoint(bool locationUpdated, double latitude, double longitude) {
                      gps.time.hour(), gps.time.minute(), gps.time.second());
   }
   trackFile.println("    </trkpt>");
-  if (trackFile.getWriteError() || trackFile.size() <= sizeBefore) {
-    setSdError(SD_WRITE_ERROR, "ERROR: GPX point write failed");
+  if (trackFile.getWriteError()) {
+    trackFile.close();
+    sdReady = false;
+    sdError = true;
+    trackState = TRACK_STOPPED;
+    drawTrackBadge();
     return;
   }
   lastTrackPointMs = now;
   trackPointCount++;
-  haveLastTrackPoint = true;
-  lastTrackLatitude = latitude;
-  lastTrackLongitude = longitude;
-  lastAcceptedTrackPointMs = now;
   Serial.printf("GPX point %lu written: %.7f, %.7f\n",
                 static_cast<unsigned long>(trackPointCount),
                 latitude, longitude);
@@ -412,7 +259,11 @@ void writeTrackPoint(bool locationUpdated, double latitude, double longitude) {
   if (now - lastTrackFlushMs >= TRACK_FLUSH_INTERVAL_MS) {
     trackFile.flush();
     if (trackFile.getWriteError()) {
-      setSdError(SD_WRITE_ERROR, "ERROR: GPX flush failed");
+      trackFile.close();
+      sdReady = false;
+      sdError = true;
+      trackState = TRACK_STOPPED;
+      drawTrackBadge();
       return;
     }
     lastTrackFlushMs = now;
@@ -455,8 +306,7 @@ void drawSettings() {
 
   drawMenuButton(8, 38, "THEME", nightTheme ? "NIGHT" : "DAY", TFT_ORANGE);
   drawMenuButton(166, 38, "UNITS", useMph ? "MPH / MI" : "KM/H / KM", TFT_GREEN);
-  drawMenuButton(8, 124, "GPX",
-                 autoTrackStart ? "AUTO START: 5 KM/H" : "START: MANUAL", TFT_CYAN);
+  drawMenuButton(8, 124, "GPX", "START: MANUAL", TFT_CYAN);
   drawMenuButton(166, 124, "BACK", "RETURN TO MENU", secondaryColor());
 
   tft.setTextDatum(BC_DATUM);
@@ -476,9 +326,8 @@ void drawMenu() {
   tft.drawString("MOTONAV", 310, 11, 2);
 
   const String trackAction = trackState == TRACK_STOPPED ? "START TRACK" :
-                             trackState == TRACK_WAIT_FIX ? "WAITING FOR FIX" :
-                             trackState == TRACK_AUTO_PAUSED ? "AUTO PAUSED" :
-                             "FINISH TRACK";
+                             trackState == TRACK_WAIT_FIX ? "CANCEL / WAIT FIX" :
+                             String("FINISH / ") + String(trackPointCount) + " PTS";
   drawMenuButton(8, 38, "TRACK", trackAction,
                  trackState == TRACK_RECORDING ? TFT_RED : accentColor());
   drawMenuButton(166, 38, "TRIP", "RETURN TO TRIP", TFT_GREEN);
@@ -522,10 +371,7 @@ void handleSettingsTap(int16_t x, int16_t y) {
     saveSettings();
     drawSettings();
   } else if (y >= 124 && y <= 202 && x < 160) {
-    autoTrackStart = !autoTrackStart;
-    autoStartThresholdMs = 0;
-    autoStartArmed = true;
-    saveSettings();
+    // GPX recording is intentionally manual-only.
     drawSettings();
   } else if (y >= 124 && y <= 202) {
     drawMenu();
@@ -882,30 +728,6 @@ void redrawTheme() {
   }
 }
 
-void updateAutomaticTrackStart() {
-  if (!autoTrackStart) {
-    autoStartThresholdMs = 0;
-    return;
-  }
-
-  const double speed = filteredSpeedKmh(validFix());
-  if (speed < SPEED_SCREEN_ENTER_KMH) {
-    autoStartThresholdMs = 0;
-    autoStartArmed = true;
-    return;
-  }
-
-  if (trackState != TRACK_STOPPED || !autoStartArmed || !validFix()) return;
-  const uint32_t now = millis();
-  if (autoStartThresholdMs == 0) autoStartThresholdMs = now;
-  if (now - autoStartThresholdMs >= SPEED_SCREEN_ENTER_HOLD_MS) {
-    autoStartArmed = false;
-    autoStartThresholdMs = 0;
-    startTrack();
-    Serial.println("GPX auto-start triggered");
-  }
-}
-
 void updateAutomaticScreenMode() {
   if (uiMode != DRIVE_UI) return;
   const uint32_t now = millis();
@@ -978,7 +800,7 @@ void setup() {
   Serial.begin(115200);
   delay(250);
   Serial.println();
-  Serial.println("MotoNav-CYD V0.7 reliable and recoverable GPX recording");
+  Serial.println("MotoNav-CYD V0.7 simple manual GPX recording");
 
   tft.init();
   tft.setRotation(1);
@@ -995,7 +817,6 @@ void setup() {
 
   gnssSerial.begin(GNSS_BAUD, SERIAL_8N1, GNSS_RX_PIN, GNSS_TX_PIN);
   initializeSd();
-  if (sdReady) recoverInterruptedTrack();
   loadSettings();
   showTripScreen();
   drawTrackBadge();
@@ -1015,13 +836,11 @@ void loop() {
 
   handleTouch();
   updateTripStatistics(locationUpdated, latitude, longitude);
-  updateAutomaticTrackStart();
   writeTrackPoint(locationUpdated, latitude, longitude);
   updateAutomaticScreenMode();
 
-  if (trackRecoveredNotice &&
-      millis() - trackRecoveredNoticeMs >= TRACK_RECOVERED_NOTICE_MS) {
-    trackRecoveredNotice = false;
+  if (savedNotice && millis() - savedNoticeMs >= 5000UL) {
+    savedNotice = false;
     drawTrackBadge();
   }
 
