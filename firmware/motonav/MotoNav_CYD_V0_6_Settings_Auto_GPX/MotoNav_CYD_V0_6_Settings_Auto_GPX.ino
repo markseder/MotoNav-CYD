@@ -306,7 +306,7 @@ void drawMenu() {
   drawMenuButton(166, 38, "TRIP", "RETURN TO TRIP", TFT_GREEN);
   drawMenuButton(8, 124, "DISPLAY", nightTheme ? "NIGHT MODE" : "DAY MODE",
                  TFT_ORANGE);
-  drawMenuButton(166, 124, "SETTINGS", "THEME / UNITS / TRACK", secondaryColor());
+  drawMenuButton(166, 124, "SETTINGS", "THEME / UNITS...", secondaryColor());
   tft.setTextDatum(BC_DATUM);
   tft.setTextColor(secondaryColor(), bg);
   tft.drawString("HOLD TO RETURN", 160, 237, 2);
