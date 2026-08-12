@@ -184,8 +184,10 @@ void writeTrackPoint(bool locationUpdated, double latitude, double longitude) {
     drawTrackBadge();
   }
 
+  // Allow a small timing tolerance: 1 Hz GNSS updates can arrive just before
+  // the nominal one-second boundary and must not be discarded.
   if (trackState != TRACK_RECORDING || !locationUpdated ||
-      now - lastTrackPointMs < TRACK_POINT_INTERVAL_MS) return;
+      now - lastTrackPointMs + 100UL < TRACK_POINT_INTERVAL_MS) return;
 
   trackFile.printf("    <trkpt lat=\"%.7f\" lon=\"%.7f\">\n",
                    latitude, longitude);
