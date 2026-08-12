@@ -66,12 +66,14 @@ String previousMaximum;
 String previousTimes;
 
 constexpr int16_t GAUGE_CX = 160;
-constexpr int16_t GAUGE_CY = 125;
-constexpr int16_t GAUGE_OUTER_R = 108;
-constexpr int16_t GAUGE_INNER_R = 90;
-constexpr int16_t GAUGE_LABEL_R = 72;
-constexpr float GAUGE_SEGMENT_HALF_ANGLE_DEG = 3.6f;
-constexpr int GAUGE_TICK_COUNT = 32;
+constexpr int16_t GAUGE_CY = 126;
+constexpr int16_t GAUGE_OUTER_RX = 154;
+constexpr int16_t GAUGE_OUTER_RY = 116;
+constexpr int16_t GAUGE_INNER_RX = 136;
+constexpr int16_t GAUGE_INNER_RY = 94;
+constexpr float GAUGE_START_DEG = 160.0f;
+constexpr float GAUGE_SWEEP_DEG = 220.0f;
+constexpr int GAUGE_TICK_COUNT = 40;
 
 uint16_t backgroundColor() { return nightTheme ? TFT_BLACK : TFT_WHITE; }
 uint16_t primaryColor() { return nightTheme ? TFT_WHITE : TFT_BLACK; }
@@ -96,10 +98,12 @@ void drawTrackBadge() {
   const String badge = trackState == TRACK_RECORDING
                            ? String("REC ") + String(trackPointCount)
                            : String(trackStateText());
-  tft.fillRect(104, 4, 92, 21, bg);
+  const int16_t badgeX = screenMode == SPEED_SCREEN ? 4 : 104;
+  const int16_t badgeCenter = screenMode == SPEED_SCREEN ? 45 : 150;
+  tft.fillRect(badgeX, 4, 92, 21, bg);
   tft.setTextDatum(TC_DATUM);
   tft.setTextColor(color, bg);
-  tft.drawString(badge, 150, 6, 2);
+  tft.drawString(badge, badgeCenter, 6, 2);
 }
 
 bool initializeSd() {
@@ -184,8 +188,6 @@ void writeTrackPoint(bool locationUpdated, double latitude, double longitude) {
     drawTrackBadge();
   }
 
-  // Allow a small timing tolerance: 1 Hz GNSS updates can arrive just before
-  // the nominal one-second boundary and must not be discarded.
   if (trackState != TRACK_RECORDING || !locationUpdated ||
       now - lastTrackPointMs + 100UL < TRACK_POINT_INTERVAL_MS) return;
 
@@ -214,32 +216,51 @@ void writeTrackPoint(bool locationUpdated, double latitude, double longitude) {
 
 void drawMenuButton(int16_t x, int16_t y, const String &title,
                     const String &subtitle, uint16_t color) {
-  const uint16_t bg = backgroundColor();
-  tft.fillRoundRect(x, y, 146, 78, 8, nightTheme ? tft.color565(18, 24, 30)
-                                                  : tft.color565(232, 238, 242));
-  tft.drawRoundRect(x, y, 146, 78, 8, color);
-  tft.setTextDatum(TC_DATUM);
-  tft.setTextColor(color, bg);
-  tft.drawString(title, x + 73, y + 13, 2);
-  tft.setTextColor(secondaryColor(), bg);
-  tft.drawString(subtitle, x + 73, y + 43, 1);
+  const uint16_t tile = nightTheme ? tft.color565(20, 27, 35) : TFT_WHITE;
+  const uint16_t titleColor = nightTheme ? TFT_WHITE : tft.color565(18, 28, 38);
+  const uint16_t subtitleColor = nightTheme ? tft.color565(150, 164, 178)
+                                            : tft.color565(82, 96, 110);
+
+  if (!nightTheme) {
+    tft.fillRoundRect(x + 2, y + 3, 146, 78, 10,
+                      tft.color565(205, 214, 222));
+  }
+  tft.fillRoundRect(x, y, 146, 78, 10, tile);
+  tft.fillRoundRect(x, y, 6, 78, 3, color);
+
+  // Match the glyph background to the tile. The old screen background here
+  // caused visible rectangular boxes around menu text in daylight mode.
+  tft.setTextDatum(TL_DATUM);
+  tft.setTextColor(titleColor, tile);
+  tft.drawString(title, x + 18, y + 13, 4);
+  tft.setTextColor(subtitleColor, tile);
+  tft.drawString(subtitle, x + 18, y + 49, 2);
 }
 
 void drawMenu() {
   uiMode = MENU_UI;
-  const uint16_t bg = backgroundColor();
+  const uint16_t bg = nightTheme ? TFT_BLACK : tft.color565(235, 240, 244);
   tft.fillScreen(bg);
-  tft.setTextDatum(TC_DATUM);
+  tft.setTextDatum(TL_DATUM);
+  tft.setTextColor(nightTheme ? TFT_WHITE : tft.color565(18, 28, 38), bg);
+  tft.drawString("MENU", 10, 7, 4);
+  tft.setTextDatum(TR_DATUM);
   tft.setTextColor(accentColor(), bg);
-  tft.drawString("MOTONAV MENU", 160, 7, 2);
-  drawMenuButton(8, 34, "TRACK", trackStateText(),
+  tft.drawString("MOTONAV", 310, 11, 2);
+
+  const String trackAction = trackState == TRACK_STOPPED ? "START TRACK" :
+                             trackState == TRACK_WAIT_FIX ? "WAITING FOR FIX" :
+                             trackState == TRACK_AUTO_PAUSED ? "AUTO PAUSED" :
+                             "FINISH TRACK";
+  drawMenuButton(8, 38, "TRACK", trackAction,
                  trackState == TRACK_RECORDING ? TFT_RED : accentColor());
-  drawMenuButton(166, 34, "TRIP", "VIEW / RESET", accentColor());
-  drawMenuButton(8, 122, "DISPLAY", nightTheme ? "NIGHT" : "DAY", accentColor());
-  drawMenuButton(166, 122, "SETTINGS", "COMING NEXT", secondaryColor());
+  drawMenuButton(166, 38, "TRIP", "RETURN TO TRIP", TFT_GREEN);
+  drawMenuButton(8, 124, "DISPLAY", nightTheme ? "NIGHT MODE" : "DAY MODE",
+                 TFT_ORANGE);
+  drawMenuButton(166, 124, "SETTINGS", "NOT AVAILABLE", secondaryColor());
   tft.setTextDatum(BC_DATUM);
   tft.setTextColor(secondaryColor(), bg);
-  tft.drawString("TAP TILE   HOLD: BACK", 160, 235, 1);
+  tft.drawString("HOLD TO RETURN", 160, 237, 2);
 }
 
 void closeMenu() {
@@ -249,13 +270,13 @@ void closeMenu() {
 }
 
 void handleMenuTap(int16_t x, int16_t y) {
-  if (y >= 34 && y <= 112 && x < 160) {
+  if (y >= 38 && y <= 116 && x < 160) {
     if (trackState == TRACK_STOPPED) startTrack();
     else finishTrack();
     drawMenu();
-  } else if (y >= 34 && y <= 112) {
+  } else if (y >= 38 && y <= 116) {
     closeMenu();
-  } else if (y >= 122 && y <= 200 && x < 160) {
+  } else if (y >= 124 && y <= 202 && x < 160) {
     nightTheme = !nightTheme;
     drawMenu();
   }
@@ -330,22 +351,26 @@ void invalidateDynamicValues() {
 }
 
 void drawGaugeTick(int tick, bool active) {
-  const float centerDeg = 135.0f + (270.0f * tick / GAUGE_TICK_COUNT);
-  const float startAngle = (centerDeg - GAUGE_SEGMENT_HALF_ANGLE_DEG) * DEG_TO_RAD;
-  const float endAngle = (centerDeg + GAUGE_SEGMENT_HALF_ANGLE_DEG) * DEG_TO_RAD;
+  const float stepDeg = GAUGE_SWEEP_DEG / GAUGE_TICK_COUNT;
+  const float centerDeg = GAUGE_START_DEG + (stepDeg * tick);
+  const float halfSegmentDeg = stepDeg * 0.39f;
+  const float startAngle = (centerDeg - halfSegmentDeg) * DEG_TO_RAD;
+  const float endAngle = (centerDeg + halfSegmentDeg) * DEG_TO_RAD;
 
-  const int16_t outerStartX = GAUGE_CX + cosf(startAngle) * GAUGE_OUTER_R;
-  const int16_t outerStartY = GAUGE_CY + sinf(startAngle) * GAUGE_OUTER_R;
-  const int16_t outerEndX = GAUGE_CX + cosf(endAngle) * GAUGE_OUTER_R;
-  const int16_t outerEndY = GAUGE_CY + sinf(endAngle) * GAUGE_OUTER_R;
-  const int16_t innerStartX = GAUGE_CX + cosf(startAngle) * GAUGE_INNER_R;
-  const int16_t innerStartY = GAUGE_CY + sinf(startAngle) * GAUGE_INNER_R;
-  const int16_t innerEndX = GAUGE_CX + cosf(endAngle) * GAUGE_INNER_R;
-  const int16_t innerEndY = GAUGE_CY + sinf(endAngle) * GAUGE_INNER_R;
+  const int16_t outerStartX = GAUGE_CX + cosf(startAngle) * GAUGE_OUTER_RX;
+  const int16_t outerStartY = GAUGE_CY + sinf(startAngle) * GAUGE_OUTER_RY;
+  const int16_t outerEndX = GAUGE_CX + cosf(endAngle) * GAUGE_OUTER_RX;
+  const int16_t outerEndY = GAUGE_CY + sinf(endAngle) * GAUGE_OUTER_RY;
+  const int16_t innerStartX = GAUGE_CX + cosf(startAngle) * GAUGE_INNER_RX;
+  const int16_t innerStartY = GAUGE_CY + sinf(startAngle) * GAUGE_INNER_RY;
+  const int16_t innerEndX = GAUGE_CX + cosf(endAngle) * GAUGE_INNER_RX;
+  const int16_t innerEndY = GAUGE_CY + sinf(endAngle) * GAUGE_INNER_RY;
 
   const uint16_t inactive = nightTheme ? tft.color565(30, 40, 48)
                                         : tft.color565(190, 200, 205);
-  const uint16_t color = active ? accentColor() : inactive;
+  const bool redZone = tick > (GAUGE_TICK_COUNT / 2);
+  const uint16_t liveColor = redZone ? TFT_RED : accentColor();
+  const uint16_t color = active ? liveColor : inactive;
 
   // Two triangles form one thick annular segment.
   tft.fillTriangle(outerStartX, outerStartY, outerEndX, outerEndY,
@@ -353,20 +378,22 @@ void drawGaugeTick(int tick, bool active) {
   tft.fillTriangle(innerStartX, innerStartY, outerEndX, outerEndY,
                    innerEndX, innerEndY, color);
 
-  if ((tick % 8) == 0) {
+  if ((tick % 10) == 0) {
     const float centerAngle = centerDeg * DEG_TO_RAD;
-    const int speedMark = tick * 5;
-    const int16_t lx = GAUGE_CX + cosf(centerAngle) * GAUGE_LABEL_R;
-    const int16_t ly = GAUGE_CY + sinf(centerAngle) * GAUGE_LABEL_R;
+    const int speedMark = tick * 4;
+    const int16_t labelRx = tick == 20 ? 121 : 125;
+    const int16_t labelRy = tick == 20 ? 72 : 75;
+    const int16_t lx = GAUGE_CX + cosf(centerAngle) * labelRx;
+    const int16_t ly = GAUGE_CY + sinf(centerAngle) * labelRy;
     tft.setTextDatum(MC_DATUM);
-    tft.setTextColor(active ? accentColor() : secondaryColor(), backgroundColor());
-    tft.drawString(String(speedMark), lx, ly, 1);
+    tft.setTextColor(speedMark > 80 ? TFT_RED : accentColor(), backgroundColor());
+    tft.drawString(String(speedMark), lx, ly, 2);
   }
 }
 
 int gaugeTickForSpeed(double speed) {
   const double limited = constrain(speed, 0.0, 160.0);
-  return static_cast<int>(round(limited / 5.0));
+  return static_cast<int>(round(limited / 4.0));
 }
 
 void drawGaugeScale(bool force = false) {
@@ -381,12 +408,9 @@ void drawGaugeScale(bool force = false) {
 void drawSpeedometerStatic() {
   const uint16_t bg = backgroundColor();
   tft.fillScreen(bg);
-  tft.drawRoundRect(3, 3, 314, 234, 8, nightTheme ? TFT_DARKGREY : TFT_LIGHTGREY);
-  tft.setTextDatum(TC_DATUM);
-  tft.setTextColor(secondaryColor(), bg);
-  tft.drawString("SPEED", 160, 8, 2);
   tft.setTextDatum(MC_DATUM);
-  tft.drawString("KM/h", 160, 181, 2);
+  tft.setTextColor(accentColor(), bg);
+  tft.drawString("KM/h", 160, 194, 4);
   previousGaugeTick = -1;
   previousSpeed = "";
   previousStatus = "";
@@ -426,7 +450,7 @@ void drawStaticScreen() {
   tft.setTextDatum(BL_DATUM);
   tft.drawString(nightTheme ? "TAP: DAY" : "TAP: NIGHT", 12, 237, 1);
   tft.setTextDatum(BR_DATUM);
-  tft.drawString("HOLD: RESET", 308, 237, 1);
+  tft.drawString("HOLD: MENU", 308, 237, 1);
 
   invalidateDynamicValues();
 }
@@ -485,7 +509,7 @@ void drawGaugeSpeed(bool fix, bool force) {
   speedSprite.setTextDatum(MC_DATUM);
   speedSprite.setTextColor(primaryColor(), backgroundColor());
   speedSprite.drawString(value, 95, 39, 8);
-  speedSprite.pushSprite(65, 83);
+  speedSprite.pushSprite(65, 91);
   previousSpeed = value;
 
   // The speed sprite overlaps the gauge edges; restore the thick arc afterward.
@@ -716,4 +740,3 @@ void loop() {
     updateDynamicScreen();
   }
 }
-
