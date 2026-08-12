@@ -33,6 +33,7 @@ bool sdReady = false;
 uint32_t lastTrackPointMs = 0;
 uint32_t lastTrackFlushMs = 0;
 uint32_t lastTrackMotionMs = 0;
+uint32_t trackPointCount = 0;
 String trackFileName;
 
 constexpr int16_t TOUCH_X_MIN = 250;
@@ -92,10 +93,13 @@ void drawTrackBadge() {
   const uint16_t color = trackState == TRACK_RECORDING ? TFT_RED :
                          trackState == TRACK_AUTO_PAUSED ? TFT_ORANGE :
                          trackState == TRACK_WAIT_FIX ? TFT_YELLOW : secondaryColor();
-  tft.fillRect(112, 4, 76, 21, bg);
+  const String badge = trackState == TRACK_RECORDING
+                           ? String("REC ") + String(trackPointCount)
+                           : String(trackStateText());
+  tft.fillRect(104, 4, 92, 21, bg);
   tft.setTextDatum(TC_DATUM);
   tft.setTextColor(color, bg);
-  tft.drawString(trackStateText(), 150, 6, 2);
+  tft.drawString(badge, 150, 6, 2);
 }
 
 bool initializeSd() {
@@ -129,6 +133,8 @@ bool openTrackFile() {
   trackFile.println("  <trk><name>MotoNav ride</name><trkseg>");
   trackFile.flush();
   lastTrackFlushMs = millis();
+  lastTrackPointMs = 0;
+  trackPointCount = 0;
   return true;
 }
 
@@ -155,7 +161,7 @@ void finishTrack() {
   drawTrackBadge();
 }
 
-void writeTrackPoint() {
+void writeTrackPoint(bool locationUpdated, double latitude, double longitude) {
   if (trackState == TRACK_WAIT_FIX && validFix()) {
     trackState = openTrackFile() ? TRACK_RECORDING : TRACK_STOPPED;
     lastTrackMotionMs = millis();
@@ -178,11 +184,11 @@ void writeTrackPoint() {
     drawTrackBadge();
   }
 
-  if (trackState != TRACK_RECORDING || !gps.location.isUpdated() ||
+  if (trackState != TRACK_RECORDING || !locationUpdated ||
       now - lastTrackPointMs < TRACK_POINT_INTERVAL_MS) return;
 
   trackFile.printf("    <trkpt lat=\"%.7f\" lon=\"%.7f\">\n",
-                   gps.location.lat(), gps.location.lng());
+                   latitude, longitude);
   if (gps.altitude.isValid()) {
     trackFile.printf("      <ele>%.2f</ele>\n", gps.altitude.meters());
   }
@@ -193,6 +199,11 @@ void writeTrackPoint() {
   }
   trackFile.println("    </trkpt>");
   lastTrackPointMs = now;
+  trackPointCount++;
+  Serial.printf("GPX point %lu written: %.7f, %.7f\n",
+                static_cast<unsigned long>(trackPointCount),
+                latitude, longitude);
+  drawTrackBadge();
   if (now - lastTrackFlushMs >= TRACK_FLUSH_INTERVAL_MS) {
     trackFile.flush();
     lastTrackFlushMs = now;
@@ -503,7 +514,7 @@ void startTripIfNeeded() {
   lastMotionSampleMs = tripStartedMs;
 }
 
-void updateTripStatistics() {
+void updateTripStatistics(bool locationUpdated, double latitude, double longitude) {
   const uint32_t now = millis();
   startTripIfNeeded();
 
@@ -523,10 +534,7 @@ void updateTripStatistics() {
     maximumSpeedKmh = max(maximumSpeedKmh, speed);
   }
 
-  if (!gps.location.isUpdated() || !fix) return;
-
-  const double latitude = gps.location.lat();
-  const double longitude = gps.location.lng();
+  if (!locationUpdated || !fix) return;
 
   if (havePreviousPosition) {
     const uint32_t gapMs = now - previousPositionMs;
@@ -692,9 +700,13 @@ void loop() {
     lastNmeaByteMs = millis();
   }
 
+  const bool locationUpdated = gps.location.isUpdated();
+  const double latitude = gps.location.lat();
+  const double longitude = gps.location.lng();
+
   handleTouch();
-  updateTripStatistics();
-  writeTrackPoint();
+  updateTripStatistics(locationUpdated, latitude, longitude);
+  writeTrackPoint(locationUpdated, latitude, longitude);
   updateAutomaticScreenMode();
 
   if (millis() - lastScreenMs >= SCREEN_REFRESH_MS) {
