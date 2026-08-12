@@ -355,12 +355,17 @@ void closeMenu() {
 void drawStopRecordReminder() {
   stopRecordReminderVisible = true;
   tft.fillScreen(TFT_BLACK);
+
+  // The whole red panel is one large, unmistakable STOP button.
+  tft.fillRoundRect(12, 20, 296, 194, 18, TFT_RED);
+  tft.drawRoundRect(12, 20, 296, 194, 18, TFT_WHITE);
+  tft.drawRoundRect(14, 22, 292, 190, 16, TFT_WHITE);
+
   tft.setTextDatum(MC_DATUM);
-  tft.setTextColor(TFT_RED, TFT_BLACK);
-  tft.drawString("STOP", 160, 78, 4);
-  tft.drawString("RECORD?", 160, 138, 4);
-  tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  tft.drawString("TAP TO OPEN MENU", 160, 211, 2);
+  tft.setTextColor(TFT_WHITE, TFT_RED);
+  tft.drawString("STOP", 160, 73, 4);
+  tft.drawString("RECORD?", 160, 125, 4);
+  tft.drawString("TAP TO FINISH", 160, 180, 2);
 }
 
 void hideStopRecordReminder() {
@@ -833,6 +838,7 @@ void handleTouch() {
   }
 
   if (down && touchWasDown && !longPressHandled &&
+      !stopRecordReminderVisible &&
       now - touchStartedMs >= MENU_HOLD_MS) {
     longPressHandled = true;
     if (uiMode == MENU_UI || uiMode == SETTINGS_UI) closeMenu();
@@ -844,8 +850,12 @@ void handleTouch() {
     touchWasDown = false;
     if (!longPressHandled && heldMs >= TOUCH_MIN_PRESS_MS) {
       if (stopRecordReminderVisible) {
+        // A tap on the large reminder button finishes and closes the GPX.
         stopRecordReminderVisible = false;
-        drawMenu();
+        trackStoppedStartedMs = 0;
+        finishTrack();
+        showTripScreen();
+        drawTrackBadge();
       } else if (uiMode == MENU_UI) handleMenuTap(tapX, tapY);
       else if (uiMode == SETTINGS_UI) handleSettingsTap(tapX, tapY);
       else {
@@ -855,6 +865,46 @@ void handleTouch() {
       }
     }
   }
+}
+
+void drawStartupTestValue(int value) {
+  const uint16_t bg = backgroundColor();
+  tft.fillRect(88, 83, 144, 76, bg);
+  tft.setTextDatum(MC_DATUM);
+  tft.setTextColor(primaryColor(), bg);
+  tft.drawString(String(value), 160, 119, 7);
+}
+
+void runStartupAnimation() {
+  const uint16_t bg = backgroundColor();
+
+  tft.fillScreen(bg);
+  tft.setTextDatum(MC_DATUM);
+  tft.setTextColor(accentColor(), bg);
+  tft.drawString("MOTONAV", 160, 88, 4);
+  tft.setTextColor(secondaryColor(), bg);
+  tft.drawString("IGNITION ON", 160, 132, 2);
+  delay(400);
+
+  drawSpeedometerStatic();
+  for (int tick = 0; tick <= GAUGE_TICK_COUNT; ++tick) {
+    drawGaugeTick(tick, true);
+    drawStartupTestValue(tick * 4);
+    delay(16);
+  }
+  for (int tick = GAUGE_TICK_COUNT; tick >= 0; --tick) {
+    drawGaugeTick(tick, false);
+    drawStartupTestValue(tick * 4);
+    delay(11);
+  }
+
+  tft.fillScreen(bg);
+  tft.setTextDatum(MC_DATUM);
+  tft.setTextColor(TFT_GREEN, bg);
+  tft.drawString("MOTONAV", 160, 91, 4);
+  tft.setTextColor(primaryColor(), bg);
+  tft.drawString("READY TO RIDE", 160, 137, 2);
+  delay(450);
 }
 
 void setup() {
@@ -879,6 +929,7 @@ void setup() {
   gnssSerial.begin(GNSS_BAUD, SERIAL_8N1, GNSS_RX_PIN, GNSS_TX_PIN);
   initializeSd();
   loadSettings();
+  runStartupAnimation();
   showTripScreen();
   drawTrackBadge();
 }
