@@ -201,10 +201,10 @@ bool writeActiveTrackMarker() {
   SD.remove(ACTIVE_TRACK_MARKER);
   File marker = SD.open(ACTIVE_TRACK_MARKER, FILE_WRITE);
   if (!marker) return false;
-  const size_t expected = trackFileName.length() + 1;
   const size_t written = marker.println(trackFileName);
   marker.flush();
-  const bool ok = written == expected && !marker.getWriteError();
+  const bool ok = written >= trackFileName.length() + 1 &&
+                  !marker.getWriteError();
   marker.close();
   return ok;
 }
