@@ -42,6 +42,13 @@ uint32_t lastTrackFlushMs = 0;
 uint32_t trackPointCount = 0;
 String trackFileName;
 
+constexpr double STOP_REMINDER_SPEED_KMH = 1.0;
+constexpr double STOP_REMINDER_CLEAR_KMH = 3.0;
+constexpr double MENU_AUTO_CLOSE_SPEED_KMH = 5.0;
+constexpr uint32_t STOP_REMINDER_DELAY_MS = 15000UL;
+uint32_t trackStoppedStartedMs = 0;
+bool stopRecordReminderVisible = false;
+
 constexpr int16_t TOUCH_X_MIN = 250;
 constexpr int16_t TOUCH_X_MAX = 3850;
 constexpr int16_t TOUCH_Y_MIN = 250;
@@ -111,7 +118,7 @@ const char *trackStateText() {
 }
 
 void drawTrackBadge() {
-  if (uiMode != DRIVE_UI) return;
+  if (uiMode != DRIVE_UI || stopRecordReminderVisible) return;
   const uint16_t bg = backgroundColor();
   String badge = "STOP";
   uint16_t color = secondaryColor();
@@ -343,6 +350,57 @@ void closeMenu() {
   uiMode = DRIVE_UI;
   redrawTheme();
   drawTrackBadge();
+}
+
+void drawStopRecordReminder() {
+  stopRecordReminderVisible = true;
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextDatum(MC_DATUM);
+  tft.setTextColor(TFT_RED, TFT_BLACK);
+  tft.drawString("STOP", 160, 82, 7);
+  tft.drawString("RECORD?", 160, 145, 6);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.drawString("TAP TO OPEN MENU", 160, 211, 2);
+}
+
+void hideStopRecordReminder() {
+  if (!stopRecordReminderVisible) return;
+  stopRecordReminderVisible = false;
+  redrawTheme();
+  drawTrackBadge();
+}
+
+void updateSafetyUi() {
+  const uint32_t now = millis();
+  const double speed = filteredSpeedKmh(validFix());
+
+  if ((uiMode == MENU_UI || uiMode == SETTINGS_UI) &&
+      speed >= MENU_AUTO_CLOSE_SPEED_KMH) {
+    closeMenu();
+  }
+
+  if (trackState != TRACK_RECORDING) {
+    trackStoppedStartedMs = 0;
+    hideStopRecordReminder();
+    return;
+  }
+
+  if (speed > STOP_REMINDER_CLEAR_KMH) {
+    trackStoppedStartedMs = 0;
+    hideStopRecordReminder();
+    return;
+  }
+
+  if (speed <= STOP_REMINDER_SPEED_KMH) {
+    if (trackStoppedStartedMs == 0) trackStoppedStartedMs = now;
+    if (!stopRecordReminderVisible &&
+        uiMode == DRIVE_UI &&
+        now - trackStoppedStartedMs >= STOP_REMINDER_DELAY_MS) {
+      drawStopRecordReminder();
+    }
+  } else {
+    trackStoppedStartedMs = 0;
+  }
 }
 
 void handleMenuTap(int16_t x, int16_t y) {
@@ -618,7 +676,7 @@ void drawGaugeSpeed(bool fix, bool force) {
 }
 
 void updateDynamicScreen(bool force = false) {
-  if (uiMode != DRIVE_UI) return;
+  if (uiMode != DRIVE_UI || stopRecordReminderVisible) return;
   const bool fix = validFix();
   if (screenMode == SPEED_SCREEN) {
     drawGaugeScale(force);
@@ -785,7 +843,10 @@ void handleTouch() {
     const uint32_t heldMs = now - touchStartedMs;
     touchWasDown = false;
     if (!longPressHandled && heldMs >= TOUCH_MIN_PRESS_MS) {
-      if (uiMode == MENU_UI) handleMenuTap(tapX, tapY);
+      if (stopRecordReminderVisible) {
+        stopRecordReminderVisible = false;
+        drawMenu();
+      } else if (uiMode == MENU_UI) handleMenuTap(tapX, tapY);
       else if (uiMode == SETTINGS_UI) handleSettingsTap(tapX, tapY);
       else {
         nightTheme = !nightTheme;
@@ -837,6 +898,7 @@ void loop() {
   handleTouch();
   updateTripStatistics(locationUpdated, latitude, longitude);
   writeTrackPoint(locationUpdated, latitude, longitude);
+  updateSafetyUi();
   updateAutomaticScreenMode();
 
   if (savedNotice && millis() - savedNoticeMs >= 5000UL) {
