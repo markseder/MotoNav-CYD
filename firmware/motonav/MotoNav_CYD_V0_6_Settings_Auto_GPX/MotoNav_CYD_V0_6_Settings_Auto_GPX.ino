@@ -186,6 +186,9 @@ void finishTrack() {
   }
   trackState = TRACK_STOPPED;
   lastTrackPointMs = 0;
+  if (autoTrackStart && filteredSpeedKmh(validFix()) >= SPEED_SCREEN_ENTER_KMH) {
+    autoStartArmed = false;
+  }
   drawTrackBadge();
 }
 
@@ -274,8 +277,8 @@ void drawSettings() {
 
   drawMenuButton(8, 38, "THEME", nightTheme ? "NIGHT" : "DAY", TFT_ORANGE);
   drawMenuButton(166, 38, "UNITS", useMph ? "MPH / MI" : "KM/H / KM", TFT_GREEN);
-  drawMenuButton(8, 124, "TRACK START",
-                 autoTrackStart ? "AUTO AT 5 KM/H" : "MANUAL", TFT_CYAN);
+  drawMenuButton(8, 124, "GPX",
+                 autoTrackStart ? "AUTO START: 5 KM/H" : "START: MANUAL", TFT_CYAN);
   drawMenuButton(166, 124, "BACK", "RETURN TO MENU", secondaryColor());
 
   tft.setTextDatum(BC_DATUM);
