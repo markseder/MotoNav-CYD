@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <TFT_eSPI.h>
+#include <Fonts/GFXFF/FreeSansBold9pt7b.h>
+#include <Fonts/GFXFF/FreeSansBold12pt7b.h>
 #include <TinyGPSPlus.h>
 #include <SPI.h>
 #include <XPT2046_Touchscreen.h>
@@ -115,9 +117,13 @@ uint16_t labelColor() { return nightTheme ? TFT_WHITE : TFT_BLACK; }
 
 void drawBoldText(const String &text, int16_t x, int16_t y, uint8_t font,
                   uint16_t foreground, uint16_t background) {
+  // Real bold GFX fonts replace the old doubled thin bitmap text.
+  const GFXfont *boldFont = font >= 4 ? &FreeSansBold12pt7b
+                                     : &FreeSansBold9pt7b;
+  tft.setFreeFont(boldFont);
   tft.setTextColor(foreground, background);
-  tft.drawString(text, x, y, font);
-  tft.drawString(text, x + 1, y, font);
+  tft.drawString(text, x, y);
+  tft.setFreeFont(nullptr);
 }
 
 double displaySpeed(double kmh) { return useMph ? kmh * 0.621371 : kmh; }
@@ -878,7 +884,7 @@ void resetTrip(bool showNotice = true) {
 
 void drawRideSummary() {
  uiMode=SUMMARY_UI;const uint16_t bg=backgroundColor(),panel=nightTheme?tft.color565(18,28,38):tft.color565(222,231,238),border=nightTheme?tft.color565(55,78,94):tft.color565(165,181,192),state=summarySavedOk?TFT_GREEN:TFT_RED;tft.fillScreen(bg);
- tft.fillRoundRect(6,4,308,27,7,state);tft.setTextDatum(MC_DATUM);tft.setTextColor(summarySavedOk?TFT_BLACK:TFT_WHITE,state);tft.drawString(summarySavedOk?"RIDE SAVED":"SAVE ERROR",160,17,4);
+ tft.fillRoundRect(6,4,308,27,7,state);tft.setTextDatum(MC_DATUM);drawBoldText(summarySavedOk?"RIDE SAVED":"SAVE ERROR",160,17,4,summarySavedOk?TFT_BLACK:TFT_WHITE,state);
  tft.fillRoundRect(6,35,308,53,8,panel);tft.drawRoundRect(6,35,308,53,8,border);drawBoldText("DISTANCE",58,61,2,labelColor(),panel);tft.setTextColor(primaryColor(),panel);tft.drawString(String(displayDistance(summaryDistanceM/1000.0),2),185,59,6);tft.setTextDatum(MR_DATUM);drawBoldText(distanceUnitText(),305,61,2,labelColor(),panel);
  const int16_t x[3]={6,109,212};const char* tl[3]={"TOTAL","MOVING","STOPPED"};const String tv[3]={durationText(summaryTotalTimeMs),durationText(summaryMovingTimeMs),durationText(summaryStoppedTimeMs)};const uint16_t ta[3]={accentColor(),TFT_GREEN,TFT_ORANGE};
  for(int i=0;i<3;++i){tft.fillRoundRect(x[i],93,98,55,7,panel);tft.drawRoundRect(x[i],93,98,55,7,border);tft.setTextDatum(TC_DATUM);drawBoldText(tl[i],x[i]+49,98,2,labelColor(),panel);tft.setTextColor(primaryColor(),panel);tft.drawString(tv[i],x[i]+49,122,4);}
