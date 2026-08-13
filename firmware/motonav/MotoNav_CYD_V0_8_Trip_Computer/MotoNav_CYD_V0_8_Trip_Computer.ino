@@ -1000,40 +1000,106 @@ void drawStartupTestValue(int value) {
 }
 
 
-void drawStartupMotorcycle(int16_t x, int16_t y, uint16_t color) {
-  // Wheels, frame, fork, tank and rider: a tiny motorcycle made from primitives.
-  tft.drawCircle(x, y, 10, color); tft.drawCircle(x, y, 9, color);
-  tft.drawCircle(x + 43, y, 10, color); tft.drawCircle(x + 43, y, 9, color);
-  tft.drawLine(x, y, x + 14, y - 17, color);
-  tft.drawLine(x + 14, y - 17, x + 27, y, color);
-  tft.drawLine(x + 27, y, x, y, color);
-  tft.drawLine(x + 14, y - 17, x + 35, y - 17, color);
-  tft.drawLine(x + 35, y - 17, x + 43, y, color);
-  tft.fillRoundRect(x + 17, y - 25, 18, 8, 3, color);
-  tft.drawLine(x + 35, y - 17, x + 39, y - 30, color);
-  tft.drawLine(x + 36, y - 29, x + 44, y - 29, color);
-  tft.fillCircle(x + 20, y - 39, 5, color);
-  tft.drawLine(x + 20, y - 34, x + 15, y - 23, color);
-  tft.drawLine(x + 20, y - 33, x + 37, y - 28, color);
+
+void drawPixelWheel(TFT_eSprite &sprite, int16_t cx, int16_t cy,
+                    uint16_t tire, uint16_t rim, bool phase) {
+  // Chunky 16-bit pixel-art wheel: octagonal tire, hub and animated spokes.
+  sprite.fillRect(cx - 7, cy - 10, 14, 3, tire);
+  sprite.fillRect(cx - 7, cy + 8, 14, 3, tire);
+  sprite.fillRect(cx - 10, cy - 7, 3, 14, tire);
+  sprite.fillRect(cx + 8, cy - 7, 3, 14, tire);
+  sprite.fillRect(cx - 8, cy - 8, 4, 4, tire);
+  sprite.fillRect(cx + 5, cy - 8, 4, 4, tire);
+  sprite.fillRect(cx - 8, cy + 5, 4, 4, tire);
+  sprite.fillRect(cx + 5, cy + 5, 4, 4, tire);
+  sprite.fillRect(cx - 2, cy - 2, 5, 5, rim);
+  if (phase) {
+    sprite.drawLine(cx, cy, cx - 6, cy - 6, rim);
+    sprite.drawLine(cx, cy, cx + 6, cy + 6, rim);
+  } else {
+    sprite.drawLine(cx, cy, cx + 6, cy - 6, rim);
+    sprite.drawLine(cx, cy, cx - 6, cy + 6, rim);
+  }
+}
+
+void drawPixelEnduro(TFT_eSprite &sprite, uint8_t frame) {
+  const uint16_t transparent = TFT_MAGENTA;
+  const uint16_t outline = nightTheme ? TFT_WHITE : TFT_BLACK;
+  const uint16_t body = nightTheme ? TFT_CYAN : tft.color565(0, 105, 70);
+  const uint16_t highlight = nightTheme ? TFT_YELLOW : tft.color565(245, 155, 20);
+  const uint16_t metal = nightTheme ? TFT_LIGHTGREY : TFT_DARKGREY;
+  const uint16_t helmet = nightTheme ? TFT_ORANGE : tft.color565(190, 35, 25);
+  sprite.fillSprite(transparent);
+
+  const int16_t bob = (frame == 1) ? 1 : 0;
+  const int16_t rearX = 21, frontX = 70, wheelY = 45;
+
+  drawPixelWheel(sprite, rearX, wheelY, outline, metal, frame & 1);
+  drawPixelWheel(sprite, frontX, wheelY - bob, outline, metal, frame & 1);
+
+  // High-clearance enduro chassis and swingarm.
+  sprite.drawLine(rearX, wheelY, 39, 31 + bob, metal);
+  sprite.drawLine(39, 31 + bob, 53, 43, metal);
+  sprite.drawLine(53, 43, rearX, wheelY, metal);
+  sprite.fillRect(35, 38 + bob, 18, 4, outline);
+  sprite.fillRect(39, 34 + bob, 11, 4, metal);
+
+  // Tall front fork and characteristic raised front mudguard.
+  sprite.drawLine(54, 23 + bob, frontX - 2, wheelY - bob, outline);
+  sprite.drawLine(58, 23 + bob, frontX + 2, wheelY - bob, metal);
+  sprite.fillRect(59, 30 + bob, 20, 3, body);
+  sprite.fillRect(70, 32 + bob, 12, 3, body);
+
+  // Tank, narrow seat, side panel and exhaust.
+  sprite.fillRect(35, 19 + bob, 22, 5, outline);
+  sprite.fillRect(38, 16 + bob, 17, 8, body);
+  sprite.fillRect(42, 18 + bob, 13, 3, highlight);
+  sprite.fillRect(25, 18 + bob, 15, 5, outline);
+  sprite.fillRect(28, 23 + bob, 20, 9, body);
+  sprite.fillTriangle(29, 31 + bob, 47, 31 + bob, 38, 39 + bob, body);
+  sprite.fillRect(18, 26 + bob, 18, 4, metal);
+  sprite.fillRect(12, 24 + bob, 12, 4, outline);
+
+  // Headlight mask, handlebar and hand guard.
+  sprite.fillRect(56, 14 + bob, 8, 12, body);
+  sprite.fillRect(63, 17 + bob, 5, 5, highlight);
+  sprite.drawLine(56, 15 + bob, 62, 10 + bob, outline);
+  sprite.drawLine(60, 10 + bob, 69, 10 + bob, outline);
+  sprite.fillRect(67, 8 + bob, 8, 4, body);
+
+  // Pixel rider leaning naturally over the bars.
+  sprite.fillRect(37, 7 + bob, 10, 10, helmet);
+  sprite.fillRect(40, 5 + bob, 8, 4, helmet);
+  sprite.fillRect(46, 9 + bob, 5, 4, outline);
+  sprite.fillRect(33, 14 + bob, 13, 11, outline);
+  sprite.drawLine(43, 17 + bob, 61, 11 + bob, outline);
+  sprite.drawLine(34, 23 + bob, 27, 34 + bob, outline);
+  sprite.drawLine(27, 34 + bob, 37, 37 + bob, outline);
 }
 
 void runMotorcycleAnimation() {
   const uint16_t bg = backgroundColor();
-  const uint16_t bikeColor = nightTheme ? TFT_CYAN : TFT_BLACK;
+  TFT_eSprite motoSprite(&tft);
+  motoSprite.setColorDepth(16);
+  if (motoSprite.createSprite(88, 58) == nullptr) return;
+
   tft.fillScreen(bg);
   tft.setTextDatum(TC_DATUM);
-  drawBoldText("MOTONAV", 160, 20, 4, labelColor(), bg);
+  drawBoldText("MOTONAV", 160, 16, 4, labelColor(), bg);
 
-  for (int16_t x = -55; x <= 325; x += 8) {
-    tft.fillRect(0, 65, 320, 125, bg);
-    // Motion streaks behind the bike.
-    for (int i = 0; i < 3; ++i) {
-      const int16_t lineX = x - 20 - i * 18;
-      if (lineX > 0) tft.drawFastHLine(lineX, 152 + i * 7, 14, secondaryColor());
+  const uint16_t road = nightTheme ? tft.color565(35, 45, 52)
+                                   : tft.color565(185, 190, 194);
+  for (int16_t x = -90, frame = 0; x <= 326; x += 7, ++frame) {
+    tft.fillRect(0, 62, 320, 136, bg);
+    tft.drawFastHLine(0, 174, 320, road);
+    for (int16_t mark = (frame * 9) % 50 - 50; mark < 320; mark += 50) {
+      tft.fillRect(mark, 184, 25, 3, road);
     }
-    drawStartupMotorcycle(x, 155, bikeColor);
-    delay(18);
+    drawPixelEnduro(motoSprite, frame % 3);
+    motoSprite.pushSprite(x, 112 + ((frame % 8 == 3) ? -1 : 0), TFT_MAGENTA);
+    delay(20);
   }
+  motoSprite.deleteSprite();
 }
 
 void runStartupAnimation() {
