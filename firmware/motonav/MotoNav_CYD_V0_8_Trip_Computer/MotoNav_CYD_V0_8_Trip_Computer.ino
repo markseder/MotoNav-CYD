@@ -150,30 +150,19 @@ const char *trackStateText() {
 
 void drawTrackBadge() {
   if (uiMode != DRIVE_UI || stopRecordReminderVisible) return;
-  const uint16_t bg = backgroundColor();
-  String badge = "STOP";
-  uint16_t color = secondaryColor();
+  String badge = "STOP"; uint16_t color = secondaryColor();
+  if (sdError) { badge = "SD ERROR"; color = TFT_RED; }
+  else if (trackState == TRACK_RECORDING) { badge = String("REC ") + String(trackPointCount); color = TFT_RED; }
+  else if (trackState == TRACK_WAIT_FIX) { badge = "WAIT FIX"; color = TFT_YELLOW; }
+  else if (savedNotice && millis() - savedNoticeMs < 5000UL) { badge = String("SAVED ") + String(savedPointCount); color = TFT_GREEN; }
 
-  if (sdError) {
-    badge = "SD ERROR";
-    color = TFT_RED;
-  } else if (trackState == TRACK_RECORDING) {
-    badge = String("REC ") + String(trackPointCount);
-    color = TFT_RED;
-  } else if (trackState == TRACK_WAIT_FIX) {
-    badge = "WAIT FIX";
-    color = TFT_YELLOW;
-  } else if (savedNotice && millis() - savedNoticeMs < 5000UL) {
-    badge = String("SAVED ") + String(savedPointCount);
-    color = TFT_GREEN;
-  }
-
-  const int16_t badgeX = screenMode == SPEED_SCREEN ? 4 : 104;
-  const int16_t badgeCenter = screenMode == SPEED_SCREEN ? 45 : 150;
-  tft.fillRect(badgeX, 4, 92, 21, bg);
-  tft.setTextDatum(TC_DATUM);
-  tft.setTextColor(color, bg);
-  tft.drawString(badge, badgeCenter, 6, 2);
+  const bool tripLayout = screenMode == TRIP_SCREEN;
+  const uint16_t cellBg = tripLayout ? (nightTheme ? tft.color565(18,28,38) : tft.color565(222,231,238)) : backgroundColor();
+  const int16_t cellX = tripLayout ? 105 : 4;
+  const int16_t centerX = tripLayout ? 151 : 45;
+  tft.fillRect(cellX, 6, 92, 20, cellBg);
+  tft.setTextDatum(MC_DATUM); tft.setTextColor(color, cellBg);
+  tft.drawString(badge, centerX, 16, 2);
 }
 
 bool initializeSd() {
@@ -739,24 +728,26 @@ void drawSpeedometerStatic() {
 }
 
 void drawStaticScreen() {
- const uint16_t bg=backgroundColor(),panel=nightTheme?tft.color565(18,28,38):tft.color565(222,231,238),border=nightTheme?tft.color565(55,78,94):tft.color565(165,181,192);tft.fillScreen(bg);
- tft.fillRoundRect(6,4,308,25,6,panel);tft.setTextDatum(ML_DATUM);drawBoldText("MOTONAV",14,16,2,labelColor(),panel);tft.setTextDatum(MR_DATUM);drawBoldText("TRIP COMPUTER",306,16,2,labelColor(),panel);
- tft.setTextDatum(MC_DATUM);tft.setTextColor(secondaryColor(),bg);tft.drawString(speedUnitText(),160,115,2);
- const int16_t x[3]={6,109,212};const uint16_t a[3]={TFT_GREEN,accentColor(),TFT_ORANGE};const char* l[3]={"TRIP","AVG","MAX"};
- for(int i=0;i<3;++i){tft.fillRoundRect(x[i],130,98,51,7,panel);tft.drawRoundRect(x[i],130,98,51,7,border);tft.fillRoundRect(x[i]+4,134,5,43,2,a[i]);tft.setTextDatum(TC_DATUM);drawBoldText(l[i],x[i]+53,134,2,labelColor(),panel);}
- tft.fillRoundRect(6,186,308,42,7,panel);tft.drawRoundRect(6,186,308,42,7,border);tft.drawFastVLine(160,191,32,border);tft.setTextDatum(TL_DATUM);drawBoldText("TOTAL",16,190,2,labelColor(),panel);drawBoldText("MOVING",170,190,2,labelColor(),panel);
- tft.setTextDatum(BC_DATUM);drawBoldText("HOLD FOR MENU",160,239,2,labelColor(),bg);invalidateDynamicValues();
+  const uint16_t bg=backgroundColor(), panel=nightTheme?tft.color565(18,28,38):tft.color565(222,231,238), border=nightTheme?tft.color565(55,78,94):tft.color565(165,181,192);
+  tft.fillScreen(bg);
+  tft.fillRoundRect(6,4,308,26,6,panel); tft.drawRoundRect(6,4,308,26,6,border);
+  tft.drawFastVLine(104,7,20,border); tft.drawFastVLine(198,7,20,border);
+  tft.setTextDatum(MC_DATUM); drawBoldText("MOTONAV",55,16,2,labelColor(),panel);
+  tft.setTextColor(secondaryColor(),bg); tft.drawString(speedUnitText(),160,117,2);
+
+  const int16_t x[3]={6,109,212}; const uint16_t accent[3]={TFT_GREEN,accentColor(),TFT_ORANGE}; const char* label[3]={"TRIP","AVG","MAX"};
+  for(int i=0;i<3;++i){tft.fillRoundRect(x[i],128,98,50,7,panel);tft.drawRoundRect(x[i],128,98,50,7,border);tft.fillRoundRect(x[i]+4,132,5,42,2,accent[i]);tft.setTextDatum(TC_DATUM);drawBoldText(label[i],x[i]+53,132,2,labelColor(),panel);}
+
+  tft.fillRoundRect(6,182,308,43,7,panel);tft.drawRoundRect(6,182,308,43,7,border);tft.drawFastVLine(160,187,33,border);
+  tft.setTextDatum(TL_DATUM);drawBoldText("TOTAL",16,186,2,labelColor(),panel);drawBoldText("MOVING",170,186,2,labelColor(),panel);
+  tft.setTextDatum(BC_DATUM);tft.setTextColor(secondaryColor(),bg);tft.drawString("HOLD FOR MENU",160,239,1);
+  invalidateDynamicValues();
 }
 
 void drawStatus(bool fix, bool force) {
-  const String status = gnssStatus(fix);
-  if (!force && status == previousStatus) return;
-  const uint16_t bg = backgroundColor();
-  tft.fillRect(190, 4, 122, 21, bg);
-  tft.setTextDatum(TR_DATUM);
-  tft.setTextColor(fix ? TFT_GREEN : TFT_ORANGE, bg);
-  tft.drawString(status, 312, 6, 2);
-  previousStatus = status;
+  const String status=gnssStatus(fix); if(!force&&status==previousStatus)return;
+  const uint16_t panel=nightTheme?tft.color565(18,28,38):tft.color565(222,231,238);
+  tft.fillRect(200,6,111,20,panel);tft.setTextDatum(MC_DATUM);tft.setTextColor(fix?TFT_GREEN:TFT_ORANGE,panel);tft.drawString(status,255,16,2);previousStatus=status;
 }
 
 void drawSpeed(bool fix, bool force) {
@@ -770,9 +761,17 @@ void drawSpeed(bool fix, bool force) {
   previousSpeed = value;
 }
 
-void drawStatistic(const String& value,String& previous,int16_t centerX,bool force){if(!force&&value==previous)return;const uint16_t panel=nightTheme?tft.color565(18,28,38):tft.color565(222,231,238);tft.fillRect(centerX-39,151,78,27,panel);tft.setTextDatum(MC_DATUM);tft.setTextColor(primaryColor(),panel);tft.drawString(value,centerX,164,4);previous=value;}
+void drawStatistic(const String &value,String &previous,int16_t centerX,bool force){
+  if(!force&&value==previous)return;const uint16_t panel=nightTheme?tft.color565(18,28,38):tft.color565(222,231,238);
+  tft.fillRect(centerX-39,149,78,26,panel);tft.setTextDatum(MC_DATUM);tft.setTextColor(primaryColor(),panel);tft.drawString(value,centerX,162,4);previous=value;
+}
 
-void drawTimes(bool force){const String value=durationText(totalTimeMs())+"|"+durationText(movingTimeMs);if(!force&&value==previousTimes)return;const uint16_t panel=nightTheme?tft.color565(18,28,38):tft.color565(222,231,238);tft.fillRect(12,207,142,18,panel);tft.fillRect(166,207,142,18,panel);tft.setTextDatum(MC_DATUM);tft.setTextColor(primaryColor(),panel);tft.drawString(durationText(totalTimeMs()),83,214,4);tft.drawString(durationText(movingTimeMs),237,214,4);previousTimes=value;}
+void drawTimes(bool force){
+  const String value=durationText(totalTimeMs())+"|"+durationText(movingTimeMs);if(!force&&value==previousTimes)return;
+  const uint16_t panel=nightTheme?tft.color565(18,28,38):tft.color565(222,231,238);
+  tft.fillRect(12,203,142,19,panel);tft.fillRect(166,203,142,19,panel);tft.setTextDatum(MC_DATUM);tft.setTextColor(primaryColor(),panel);
+  tft.drawString(durationText(totalTimeMs()),83,212,4);tft.drawString(durationText(movingTimeMs),237,212,4);previousTimes=value;
+}
 
 void drawGaugeSpeed(bool fix, bool force) {
   const String value = speedText(fix);
@@ -880,16 +879,27 @@ void resetTrip(bool showNotice = true) {
   }
 }
 
+
 void drawRideSummary() {
- uiMode=SUMMARY_UI;const uint16_t bg=backgroundColor(),panel=nightTheme?tft.color565(18,28,38):tft.color565(222,231,238),border=nightTheme?tft.color565(55,78,94):tft.color565(165,181,192),state=summarySavedOk?TFT_GREEN:TFT_RED;tft.fillScreen(bg);
- tft.fillRoundRect(6,4,308,27,7,state);tft.setTextDatum(MC_DATUM);drawBoldText(summarySavedOk?"RIDE SAVED":"SAVE ERROR",160,17,4,summarySavedOk?TFT_BLACK:TFT_WHITE,state);
- tft.fillRoundRect(6,35,308,53,8,panel);tft.drawRoundRect(6,35,308,53,8,border);drawBoldText("DISTANCE",58,61,2,labelColor(),panel);tft.setTextColor(primaryColor(),panel);tft.drawString(String(displayDistance(summaryDistanceM/1000.0),2),185,59,6);tft.setTextDatum(MR_DATUM);drawBoldText(distanceUnitText(),305,61,2,labelColor(),panel);
- const int16_t x[3]={6,109,212};const char* tl[3]={"TOTAL","MOVING","STOPPED"};const String tv[3]={durationText(summaryTotalTimeMs),durationText(summaryMovingTimeMs),durationText(summaryStoppedTimeMs)};const uint16_t ta[3]={accentColor(),TFT_GREEN,TFT_ORANGE};
- for(int i=0;i<3;++i){tft.fillRoundRect(x[i],93,98,55,7,panel);tft.drawRoundRect(x[i],93,98,55,7,border);tft.setTextDatum(TC_DATUM);drawBoldText(tl[i],x[i]+49,98,2,labelColor(),panel);tft.setTextColor(primaryColor(),panel);tft.drawString(tv[i],x[i]+49,122,4);}
- const char* sl[3]={"AVG","MAX","POINTS"};const String sv[3]={statisticSpeedText(summaryAverageSpeedKmh),statisticSpeedText(summaryMaximumSpeedKmh),String(summaryPointCount)};const uint16_t sa[3]={TFT_CYAN,TFT_ORANGE,TFT_GREEN};
- for(int i=0;i<3;++i){tft.fillRoundRect(x[i],153,98,59,7,panel);tft.drawRoundRect(x[i],153,98,59,7,border);tft.fillRoundRect(x[i]+4,157,5,51,2,sa[i]);tft.setTextDatum(TC_DATUM);drawBoldText(sl[i],x[i]+53,157,2,labelColor(),panel);tft.setTextColor(primaryColor(),panel);tft.drawString(sv[i],x[i]+53,180,4);}
- tft.setTextDatum(BC_DATUM);drawBoldText("TAP TO CONTINUE",160,237,2,labelColor(),bg);
+  uiMode=SUMMARY_UI;
+  const uint16_t bg=backgroundColor(),panel=nightTheme?tft.color565(18,28,38):tft.color565(222,231,238),border=nightTheme?tft.color565(55,78,94):tft.color565(165,181,192),state=summarySavedOk?TFT_GREEN:TFT_RED;
+  tft.fillScreen(bg);
+  tft.fillRoundRect(6,4,308,28,7,state);tft.setTextDatum(MC_DATUM);drawBoldText(summarySavedOk?"RIDE SAVED":"SAVE ERROR",160,18,2,summarySavedOk?TFT_BLACK:TFT_WHITE,state);
+
+  tft.fillRoundRect(6,36,308,51,8,panel);tft.drawRoundRect(6,36,308,51,8,border);
+  tft.setTextDatum(ML_DATUM);drawBoldText("DISTANCE",18,61,2,labelColor(),panel);
+  tft.setTextDatum(MC_DATUM);tft.setTextColor(primaryColor(),panel);tft.drawString(String(displayDistance(summaryDistanceM/1000.0),2),201,59,6);
+  tft.setTextDatum(MR_DATUM);drawBoldText(distanceUnitText(),304,61,2,labelColor(),panel);
+
+  const int16_t x[3]={6,109,212};const char* tl[3]={"TOTAL","MOVING","STOPPED"};const String tv[3]={durationText(summaryTotalTimeMs),durationText(summaryMovingTimeMs),durationText(summaryStoppedTimeMs)};
+  for(int i=0;i<3;++i){tft.fillRoundRect(x[i],92,98,54,7,panel);tft.drawRoundRect(x[i],92,98,54,7,border);tft.setTextDatum(TC_DATUM);drawBoldText(tl[i],x[i]+49,97,2,labelColor(),panel);tft.setTextDatum(MC_DATUM);tft.setTextColor(primaryColor(),panel);tft.drawString(tv[i],x[i]+49,126,4);}
+
+  const char* sl[3]={"AVG","MAX","POINTS"};const String sv[3]={statisticSpeedText(summaryAverageSpeedKmh),statisticSpeedText(summaryMaximumSpeedKmh),String(summaryPointCount)};const uint16_t sa[3]={TFT_CYAN,TFT_ORANGE,TFT_GREEN};
+  for(int i=0;i<3;++i){tft.fillRoundRect(x[i],151,98,61,7,panel);tft.drawRoundRect(x[i],151,98,61,7,border);tft.fillRoundRect(x[i]+4,155,5,53,2,sa[i]);tft.setTextDatum(TC_DATUM);drawBoldText(sl[i],x[i]+53,155,2,labelColor(),panel);tft.setTextDatum(MC_DATUM);tft.setTextColor(primaryColor(),panel);tft.drawString(sv[i],x[i]+53,188,4);}
+
+  tft.setTextDatum(BC_DATUM);tft.setTextColor(secondaryColor(),bg);tft.drawString("TAP TO CONTINUE",160,239,1);
 }
+
 
 void showTripScreen() {
   uiMode = DRIVE_UI;
