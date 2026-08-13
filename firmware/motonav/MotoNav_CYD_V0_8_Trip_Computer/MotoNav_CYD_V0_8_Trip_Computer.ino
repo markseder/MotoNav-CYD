@@ -536,6 +536,10 @@ void handleMenuTap(int16_t x, int16_t y) {
     if (trackState == TRACK_STOPPED) {
       startTrack();
       drawMenu();
+    } else if (trackState == TRACK_WAIT_FIX) {
+      trackState = TRACK_STOPPED;
+      resetTrip(false);
+      drawMenu();
     } else {
       finishTrack();
       drawRideSummary();
