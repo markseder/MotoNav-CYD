@@ -14,7 +14,7 @@ TFT_eSprite speedSprite(&tft);
 TinyGPSPlus gps;
 HardwareSerial gnssSerial(GNSS_UART_NUMBER);
 SPIClass touchSpi(HSPI);
-SPIClass sdSpi(VSPI);
+SPIClass sdSpi(FSPI);
 File trackFile;
 XPT2046_Touchscreen touch(TOUCH_CS_PIN, TOUCH_IRQ_PIN);
 Preferences preferences;
