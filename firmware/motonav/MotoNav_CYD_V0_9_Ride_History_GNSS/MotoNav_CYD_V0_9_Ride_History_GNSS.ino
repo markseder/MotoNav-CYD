@@ -825,13 +825,13 @@ void updateSafetyUi() {
   const uint32_t now = millis();
   const double speed = filteredSpeedKmh(validFix());
 
-  if ((uiMode == MENU_UI || uiMode == SETTINGS_UI ||
-       uiMode == GNSS_UI || uiMode == RIDES_UI) &&
+  if ((uiMode == MENU_UI || uiMode == SETTINGS_UI || uiMode == GNSS_UI) &&
       speed >= MENU_AUTO_CLOSE_SPEED_KMH) {
     closeMenu();
   }
 
-  if (uiMode == SUMMARY_UI && speed >= MENU_AUTO_CLOSE_SPEED_KMH) {
+  if ((uiMode == SUMMARY_UI || uiMode == RIDES_UI) &&
+      speed >= MENU_AUTO_CLOSE_SPEED_KMH) {
     showSpeedScreen();
   }
 
@@ -1239,9 +1239,10 @@ void drawRideSummary() {
   tft.fillRoundRect(6,4,308,28,7,state);tft.setTextDatum(MC_DATUM);drawBoldText(summarySavedOk?"RIDE SAVED":"SAVE ERROR",160,18,2,summarySavedOk?TFT_BLACK:TFT_WHITE,state);
 
   tft.fillRoundRect(6,36,308,51,8,panel);tft.drawRoundRect(6,36,308,51,8,border);
-  tft.setTextDatum(ML_DATUM);drawBoldText("DISTANCE",18,61,2,labelColor(),panel);
-  tft.setTextDatum(MC_DATUM);tft.setTextColor(primaryColor(),panel);tft.drawString(String(displayDistance(summaryDistanceM/1000.0),2),201,59,6);
-  tft.setTextDatum(MR_DATUM);drawBoldText(distanceUnitText(),304,61,2,labelColor(),panel);
+  // Lower the complete distance row for better visual centering with the bold font.
+  tft.setTextDatum(ML_DATUM);drawBoldText("DISTANCE",18,63,2,labelColor(),panel);
+  tft.setTextDatum(MC_DATUM);tft.setTextColor(primaryColor(),panel);tft.drawString(String(displayDistance(summaryDistanceM/1000.0),2),201,61,6);
+  tft.setTextDatum(MR_DATUM);drawBoldText(distanceUnitText(),304,63,2,labelColor(),panel);
 
   const int16_t x[3]={6,109,212};const char* tl[3]={"TOTAL","MOVING","STOPPED"};const String tv[3]={durationText(summaryTotalTimeMs),durationText(summaryMovingTimeMs),durationText(summaryStoppedTimeMs)};
   for(int i=0;i<3;++i){tft.fillRoundRect(x[i],92,98,54,7,panel);tft.drawRoundRect(x[i],92,98,54,7,border);tft.setTextDatum(TC_DATUM);drawBoldText(tl[i],x[i]+49,97,2,labelColor(),panel);tft.setTextDatum(MC_DATUM);tft.setTextColor(primaryColor(),panel);tft.drawString(tv[i],x[i]+49,126,4);}
