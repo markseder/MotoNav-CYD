@@ -1,7 +1,5 @@
 #include <Arduino.h>
 #include <TFT_eSPI.h>
-#include <Fonts/GFXFF/FreeSansBold9pt7b.h>
-#include <Fonts/GFXFF/FreeSansBold12pt7b.h>
 #include <TinyGPSPlus.h>
 #include <SPI.h>
 #include <XPT2046_Touchscreen.h>
