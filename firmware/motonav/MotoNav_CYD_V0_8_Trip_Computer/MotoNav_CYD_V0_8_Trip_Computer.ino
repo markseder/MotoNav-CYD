@@ -104,6 +104,7 @@ constexpr int GAUGE_TICK_COUNT = 40;
 // Forward declarations required by the Arduino sketch preprocessor.
 void resetTrip(bool showNotice);
 void drawRideSummary();
+void showSpeedScreen();
 
 uint16_t backgroundColor() { return nightTheme ? TFT_BLACK : TFT_WHITE; }
 uint16_t primaryColor() { return nightTheme ? TFT_WHITE : TFT_BLACK; }
@@ -511,6 +512,10 @@ void updateSafetyUi() {
     closeMenu();
   }
 
+  if (uiMode == SUMMARY_UI && speed >= MENU_AUTO_CLOSE_SPEED_KMH) {
+    showSpeedScreen();
+  }
+
   if (trackState != TRACK_RECORDING) {
     trackStoppedStartedMs = 0;
     hideStopRecordReminder();
@@ -721,41 +726,13 @@ void drawSpeedometerStatic() {
 }
 
 void drawStaticScreen() {
-  const uint16_t bg = backgroundColor();
-  const uint16_t divider = nightTheme ? TFT_DARKGREY : TFT_LIGHTGREY;
-
-  tft.fillScreen(bg);
-  tft.setTextDatum(TL_DATUM);
-  tft.setTextColor(accentColor(), bg);
-  tft.drawString("MotoNav", 8, 6, 2);
-  tft.drawFastHLine(8, 27, 304, divider);
-
-  tft.setTextDatum(MC_DATUM);
-  tft.setTextColor(secondaryColor(), bg);
-  tft.drawString(speedUnitText(), 160, 116, 2);
-
-  tft.drawFastHLine(8, 128, 304, divider);
-  tft.drawFastVLine(106, 134, 50, divider);
-  tft.drawFastVLine(213, 134, 50, divider);
-
-  tft.setTextDatum(TC_DATUM);
-  tft.setTextColor(secondaryColor(), bg);
-  tft.drawString(String("TRIP ") + distanceUnitText(), 54, 132, 1);
-  tft.drawString(String("AVG ") + speedUnitText(), 160, 132, 1);
-  tft.drawString(String("MAX ") + speedUnitText(), 267, 132, 1);
-
-  tft.drawFastHLine(8, 185, 304, divider);
-  tft.setTextDatum(TL_DATUM);
-  tft.drawString("TOTAL", 12, 193, 1);
-  tft.drawString("MOVING", 166, 193, 1);
-
-  tft.setTextColor(accentColor(), bg);
-  tft.setTextDatum(BL_DATUM);
-  tft.drawString(nightTheme ? "TAP: DAY" : "TAP: NIGHT", 12, 237, 1);
-  tft.setTextDatum(BR_DATUM);
-  tft.drawString("HOLD: MENU", 308, 237, 1);
-
-  invalidateDynamicValues();
+ const uint16_t bg=backgroundColor(),panel=nightTheme?tft.color565(18,28,38):tft.color565(222,231,238),border=nightTheme?tft.color565(55,78,94):tft.color565(165,181,192);tft.fillScreen(bg);
+ tft.fillRoundRect(6,4,308,25,6,panel);tft.setTextDatum(ML_DATUM);tft.setTextColor(accentColor(),panel);tft.drawString("MOTONAV",14,16,2);tft.setTextDatum(MR_DATUM);tft.setTextColor(secondaryColor(),panel);tft.drawString("TRIP COMPUTER",306,16,2);
+ tft.setTextDatum(MC_DATUM);tft.setTextColor(secondaryColor(),bg);tft.drawString(speedUnitText(),160,115,2);
+ const int16_t x[3]={6,109,212};const uint16_t a[3]={TFT_GREEN,accentColor(),TFT_ORANGE};const char* l[3]={"TRIP","AVG","MAX"};
+ for(int i=0;i<3;++i){tft.fillRoundRect(x[i],130,98,51,7,panel);tft.drawRoundRect(x[i],130,98,51,7,border);tft.fillRoundRect(x[i]+4,134,5,43,2,a[i]);tft.setTextDatum(TC_DATUM);tft.setTextColor(a[i],panel);tft.drawString(l[i],x[i]+53,134,2);}
+ tft.fillRoundRect(6,186,308,42,7,panel);tft.drawRoundRect(6,186,308,42,7,border);tft.drawFastVLine(160,191,32,border);tft.setTextDatum(TL_DATUM);tft.setTextColor(accentColor(),panel);tft.drawString("TOTAL",16,190,2);tft.setTextColor(TFT_GREEN,panel);tft.drawString("MOVING",170,190,2);
+ tft.setTextDatum(BC_DATUM);tft.setTextColor(secondaryColor(),bg);tft.drawString("HOLD FOR MENU",160,239,2);invalidateDynamicValues();
 }
 
 void drawStatus(bool fix, bool force) {
@@ -780,30 +757,9 @@ void drawSpeed(bool fix, bool force) {
   previousSpeed = value;
 }
 
-void drawStatistic(const String &value, String &previous,
-                   int16_t centerX, bool force) {
-  if (!force && value == previous) return;
-  const uint16_t bg = backgroundColor();
-  tft.fillRect(centerX - 48, 145, 96, 36, bg);
-  tft.setTextDatum(TC_DATUM);
-  tft.setTextColor(primaryColor(), bg);
-  tft.drawString(value, centerX, 148, 4);
-  previous = value;
-}
+void drawStatistic(const String& value,String& previous,int16_t centerX,bool force){if(!force&&value==previous)return;const uint16_t panel=nightTheme?tft.color565(18,28,38):tft.color565(222,231,238);tft.fillRect(centerX-39,151,78,27,panel);tft.setTextDatum(MC_DATUM);tft.setTextColor(primaryColor(),panel);tft.drawString(value,centerX,164,4);previous=value;}
 
-void drawTimes(bool force) {
-  const String value = durationText(totalTimeMs()) + "|" +
-                       durationText(movingTimeMs);
-  if (!force && value == previousTimes) return;
-  const uint16_t bg = backgroundColor();
-  // Keep the time refresh area clear of the footer hints at y=229.
-  tft.fillRect(8, 204, 304, 23, bg);
-  tft.setTextDatum(TC_DATUM);
-  tft.setTextColor(primaryColor(), bg);
-  tft.drawString(durationText(totalTimeMs()), 76, 205, 2);
-  tft.drawString(durationText(movingTimeMs), 236, 205, 2);
-  previousTimes = value;
-}
+void drawTimes(bool force){const String value=durationText(totalTimeMs())+"|"+durationText(movingTimeMs);if(!force&&value==previousTimes)return;const uint16_t panel=nightTheme?tft.color565(18,28,38):tft.color565(222,231,238);tft.fillRect(12,207,142,18,panel);tft.fillRect(166,207,142,18,panel);tft.setTextDatum(MC_DATUM);tft.setTextColor(primaryColor(),panel);tft.drawString(durationText(totalTimeMs()),83,214,4);tft.drawString(durationText(movingTimeMs),237,214,4);previousTimes=value;}
 
 void drawGaugeSpeed(bool fix, bool force) {
   const String value = speedText(fix);
@@ -829,9 +785,9 @@ void updateDynamicScreen(bool force = false) {
   }
   drawStatus(fix, force);
   drawSpeed(fix, force);
-  drawStatistic(distanceText(), previousTrip, 54, force);
-  drawStatistic(statisticSpeedText(averageSpeedKmh()), previousAverage, 160, force);
-  drawStatistic(statisticSpeedText(maximumSpeedKmh), previousMaximum, 267, force);
+  drawStatistic(distanceText(), previousTrip, 59, force);
+  drawStatistic(statisticSpeedText(averageSpeedKmh()), previousAverage, 162, force);
+  drawStatistic(statisticSpeedText(maximumSpeedKmh), previousMaximum, 265, force);
   drawTimes(force);
   drawTrackBadge();
 }
@@ -912,44 +868,14 @@ void resetTrip(bool showNotice = true) {
 }
 
 void drawRideSummary() {
-  uiMode = SUMMARY_UI;
-  const uint16_t bg = backgroundColor();
-  const uint16_t divider = nightTheme ? TFT_DARKGREY : TFT_LIGHTGREY;
-  tft.fillScreen(bg);
-
-  tft.setTextDatum(TC_DATUM);
-  tft.setTextColor(summarySavedOk ? TFT_GREEN : TFT_RED, bg);
-  tft.drawString(summarySavedOk ? "RIDE SAVED" : "SAVE ERROR", 160, 7, 4);
-
-  tft.setTextColor(primaryColor(), bg);
-  tft.drawString(String(displayDistance(summaryDistanceM / 1000.0), 2) + " " +
-                 distanceUnitText(), 160, 43, 4);
-
-  tft.drawFastHLine(10, 78, 300, divider);
-  tft.setTextColor(secondaryColor(), bg);
-  tft.drawString("TOTAL", 54, 86, 1);
-  tft.drawString("MOVING", 160, 86, 1);
-  tft.drawString("STOPPED", 266, 86, 1);
-  tft.setTextColor(primaryColor(), bg);
-  tft.drawString(durationText(summaryTotalTimeMs), 54, 101, 2);
-  tft.drawString(durationText(summaryMovingTimeMs), 160, 101, 2);
-  tft.drawString(durationText(summaryStoppedTimeMs), 266, 101, 2);
-
-  tft.drawFastHLine(10, 128, 300, divider);
-  tft.setTextColor(secondaryColor(), bg);
-  tft.drawString("AVG", 70, 137, 1);
-  tft.drawString("MAX", 160, 137, 1);
-  tft.drawString("POINTS", 250, 137, 1);
-  tft.setTextColor(primaryColor(), bg);
-  tft.drawString(statisticSpeedText(summaryAverageSpeedKmh), 70, 153, 4);
-  tft.drawString(statisticSpeedText(summaryMaximumSpeedKmh), 160, 153, 4);
-  tft.drawString(String(summaryPointCount), 250, 153, 4);
-
-  tft.setTextColor(secondaryColor(), bg);
-  tft.drawString(speedUnitText(), 115, 183, 1);
-  tft.drawString(speedUnitText(), 205, 183, 1);
-  tft.setTextColor(accentColor(), bg);
-  tft.drawString("TAP TO CONTINUE", 160, 216, 2);
+ uiMode=SUMMARY_UI;const uint16_t bg=backgroundColor(),panel=nightTheme?tft.color565(18,28,38):tft.color565(222,231,238),border=nightTheme?tft.color565(55,78,94):tft.color565(165,181,192),state=summarySavedOk?TFT_GREEN:TFT_RED;tft.fillScreen(bg);
+ tft.fillRoundRect(6,4,308,27,7,state);tft.setTextDatum(MC_DATUM);tft.setTextColor(summarySavedOk?TFT_BLACK:TFT_WHITE,state);tft.drawString(summarySavedOk?"RIDE SAVED":"SAVE ERROR",160,17,4);
+ tft.fillRoundRect(6,35,308,53,8,panel);tft.drawRoundRect(6,35,308,53,8,border);tft.setTextColor(secondaryColor(),panel);tft.drawString("DISTANCE",58,61,2);tft.setTextColor(primaryColor(),panel);tft.drawString(String(displayDistance(summaryDistanceM/1000.0),2),185,59,6);tft.setTextDatum(MR_DATUM);tft.setTextColor(accentColor(),panel);tft.drawString(distanceUnitText(),305,61,2);
+ const int16_t x[3]={6,109,212};const char* tl[3]={"TOTAL","MOVING","STOPPED"};const String tv[3]={durationText(summaryTotalTimeMs),durationText(summaryMovingTimeMs),durationText(summaryStoppedTimeMs)};const uint16_t ta[3]={accentColor(),TFT_GREEN,TFT_ORANGE};
+ for(int i=0;i<3;++i){tft.fillRoundRect(x[i],93,98,55,7,panel);tft.drawRoundRect(x[i],93,98,55,7,border);tft.setTextDatum(TC_DATUM);tft.setTextColor(ta[i],panel);tft.drawString(tl[i],x[i]+49,98,2);tft.setTextColor(primaryColor(),panel);tft.drawString(tv[i],x[i]+49,122,4);}
+ const char* sl[3]={"AVG","MAX","POINTS"};const String sv[3]={statisticSpeedText(summaryAverageSpeedKmh),statisticSpeedText(summaryMaximumSpeedKmh),String(summaryPointCount)};const uint16_t sa[3]={TFT_CYAN,TFT_ORANGE,TFT_GREEN};
+ for(int i=0;i<3;++i){tft.fillRoundRect(x[i],153,98,59,7,panel);tft.drawRoundRect(x[i],153,98,59,7,border);tft.fillRoundRect(x[i]+4,157,5,51,2,sa[i]);tft.setTextDatum(TC_DATUM);tft.setTextColor(sa[i],panel);tft.drawString(sl[i],x[i]+53,157,2);tft.setTextColor(primaryColor(),panel);tft.drawString(sv[i],x[i]+53,180,4);}
+ tft.setTextDatum(BC_DATUM);tft.setTextColor(accentColor(),bg);tft.drawString("TAP TO CONTINUE",160,237,2);
 }
 
 void showTripScreen() {
