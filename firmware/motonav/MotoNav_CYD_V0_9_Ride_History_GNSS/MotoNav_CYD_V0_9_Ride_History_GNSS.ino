@@ -14,7 +14,9 @@ TFT_eSprite speedSprite(&tft);
 TinyGPSPlus gps;
 HardwareSerial gnssSerial(GNSS_UART_NUMBER);
 SPIClass touchSpi(HSPI);
-SPIClass sdSpi(FSPI);
+// CYD microSD uses the ESP32 SPI3 controller (legacy VSPI).
+// Numeric host 3 keeps compatibility with ESP32 Core 3.x where VSPI may be hidden.
+SPIClass sdSpi(3);
 File trackFile;
 XPT2046_Touchscreen touch(TOUCH_CS_PIN, TOUCH_IRQ_PIN);
 Preferences preferences;
