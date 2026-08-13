@@ -488,8 +488,13 @@ bool trackPointQualityOk(uint32_t now, double latitude, double longitude) {
   const double segmentM = TinyGPSPlus::distanceBetween(
       previousTrackLatitude, previousTrackLongitude, latitude, longitude);
   const double impliedKmh = gapMs > 0 ? segmentM * 3600.0 / gapMs : 9999.0;
+  if (gapMs > MAX_TRACK_POINT_GAP_MS) {
+    previousTrackLatitude = latitude;
+    previousTrackLongitude = longitude;
+    previousTrackPositionMs = now;
+    return false;
+  }
   if (segmentM < MIN_TRACK_POINT_DISTANCE_M) return false;
-  if (gapMs > MAX_TRACK_POINT_GAP_MS) return false;
   if (segmentM > MAX_TRACK_SEGMENT_DISTANCE_M) return false;
   return impliedKmh <= MAX_VALID_SPEED_KMH;
 }
@@ -1247,8 +1252,8 @@ void handleTouch() {
       !stopRecordReminderVisible &&
       now - touchStartedMs >= MENU_HOLD_MS) {
     longPressHandled = true;
-    if (uiMode == MENU_UI || uiMode == SETTINGS_UI ||
-        uiMode == GNSS_UI || uiMode == RIDES_UI) drawMenu();
+    if (uiMode == MENU_UI || uiMode == SETTINGS_UI) closeMenu();
+    else if (uiMode == GNSS_UI || uiMode == RIDES_UI) drawMenu();
     else if (filteredSpeedKmh(validFix()) < MENU_MAX_SPEED_KMH) drawMenu();
   }
 
