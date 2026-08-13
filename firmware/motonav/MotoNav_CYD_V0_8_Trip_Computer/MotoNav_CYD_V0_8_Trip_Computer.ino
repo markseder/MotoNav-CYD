@@ -111,6 +111,15 @@ uint16_t primaryColor() { return nightTheme ? TFT_WHITE : TFT_BLACK; }
 uint16_t secondaryColor() { return nightTheme ? TFT_LIGHTGREY : TFT_DARKGREY; }
 uint16_t accentColor() { return nightTheme ? TFT_CYAN : TFT_BLUE; }
 
+uint16_t labelColor() { return nightTheme ? TFT_WHITE : TFT_BLACK; }
+
+void drawBoldText(const String &text, int16_t x, int16_t y, uint8_t font,
+                  uint16_t foreground, uint16_t background) {
+  tft.setTextColor(foreground, background);
+  tft.drawString(text, x, y, font);
+  tft.drawString(text, x + 1, y, font);
+}
+
 double displaySpeed(double kmh) { return useMph ? kmh * 0.621371 : kmh; }
 double displayDistance(double km) { return useMph ? km * 0.621371 : km; }
 const char *speedUnitText() { return useMph ? "mph" : "km/h"; }
@@ -727,12 +736,12 @@ void drawSpeedometerStatic() {
 
 void drawStaticScreen() {
  const uint16_t bg=backgroundColor(),panel=nightTheme?tft.color565(18,28,38):tft.color565(222,231,238),border=nightTheme?tft.color565(55,78,94):tft.color565(165,181,192);tft.fillScreen(bg);
- tft.fillRoundRect(6,4,308,25,6,panel);tft.setTextDatum(ML_DATUM);tft.setTextColor(accentColor(),panel);tft.drawString("MOTONAV",14,16,2);tft.setTextDatum(MR_DATUM);tft.setTextColor(secondaryColor(),panel);tft.drawString("TRIP COMPUTER",306,16,2);
+ tft.fillRoundRect(6,4,308,25,6,panel);tft.setTextDatum(ML_DATUM);drawBoldText("MOTONAV",14,16,2,labelColor(),panel);tft.setTextDatum(MR_DATUM);drawBoldText("TRIP COMPUTER",306,16,2,labelColor(),panel);
  tft.setTextDatum(MC_DATUM);tft.setTextColor(secondaryColor(),bg);tft.drawString(speedUnitText(),160,115,2);
  const int16_t x[3]={6,109,212};const uint16_t a[3]={TFT_GREEN,accentColor(),TFT_ORANGE};const char* l[3]={"TRIP","AVG","MAX"};
- for(int i=0;i<3;++i){tft.fillRoundRect(x[i],130,98,51,7,panel);tft.drawRoundRect(x[i],130,98,51,7,border);tft.fillRoundRect(x[i]+4,134,5,43,2,a[i]);tft.setTextDatum(TC_DATUM);tft.setTextColor(a[i],panel);tft.drawString(l[i],x[i]+53,134,2);}
- tft.fillRoundRect(6,186,308,42,7,panel);tft.drawRoundRect(6,186,308,42,7,border);tft.drawFastVLine(160,191,32,border);tft.setTextDatum(TL_DATUM);tft.setTextColor(accentColor(),panel);tft.drawString("TOTAL",16,190,2);tft.setTextColor(TFT_GREEN,panel);tft.drawString("MOVING",170,190,2);
- tft.setTextDatum(BC_DATUM);tft.setTextColor(secondaryColor(),bg);tft.drawString("HOLD FOR MENU",160,239,2);invalidateDynamicValues();
+ for(int i=0;i<3;++i){tft.fillRoundRect(x[i],130,98,51,7,panel);tft.drawRoundRect(x[i],130,98,51,7,border);tft.fillRoundRect(x[i]+4,134,5,43,2,a[i]);tft.setTextDatum(TC_DATUM);drawBoldText(l[i],x[i]+53,134,2,labelColor(),panel);}
+ tft.fillRoundRect(6,186,308,42,7,panel);tft.drawRoundRect(6,186,308,42,7,border);tft.drawFastVLine(160,191,32,border);tft.setTextDatum(TL_DATUM);drawBoldText("TOTAL",16,190,2,labelColor(),panel);drawBoldText("MOVING",170,190,2,labelColor(),panel);
+ tft.setTextDatum(BC_DATUM);drawBoldText("HOLD FOR MENU",160,239,2,labelColor(),bg);invalidateDynamicValues();
 }
 
 void drawStatus(bool fix, bool force) {
@@ -870,12 +879,12 @@ void resetTrip(bool showNotice = true) {
 void drawRideSummary() {
  uiMode=SUMMARY_UI;const uint16_t bg=backgroundColor(),panel=nightTheme?tft.color565(18,28,38):tft.color565(222,231,238),border=nightTheme?tft.color565(55,78,94):tft.color565(165,181,192),state=summarySavedOk?TFT_GREEN:TFT_RED;tft.fillScreen(bg);
  tft.fillRoundRect(6,4,308,27,7,state);tft.setTextDatum(MC_DATUM);tft.setTextColor(summarySavedOk?TFT_BLACK:TFT_WHITE,state);tft.drawString(summarySavedOk?"RIDE SAVED":"SAVE ERROR",160,17,4);
- tft.fillRoundRect(6,35,308,53,8,panel);tft.drawRoundRect(6,35,308,53,8,border);tft.setTextColor(secondaryColor(),panel);tft.drawString("DISTANCE",58,61,2);tft.setTextColor(primaryColor(),panel);tft.drawString(String(displayDistance(summaryDistanceM/1000.0),2),185,59,6);tft.setTextDatum(MR_DATUM);tft.setTextColor(accentColor(),panel);tft.drawString(distanceUnitText(),305,61,2);
+ tft.fillRoundRect(6,35,308,53,8,panel);tft.drawRoundRect(6,35,308,53,8,border);drawBoldText("DISTANCE",58,61,2,labelColor(),panel);tft.setTextColor(primaryColor(),panel);tft.drawString(String(displayDistance(summaryDistanceM/1000.0),2),185,59,6);tft.setTextDatum(MR_DATUM);drawBoldText(distanceUnitText(),305,61,2,labelColor(),panel);
  const int16_t x[3]={6,109,212};const char* tl[3]={"TOTAL","MOVING","STOPPED"};const String tv[3]={durationText(summaryTotalTimeMs),durationText(summaryMovingTimeMs),durationText(summaryStoppedTimeMs)};const uint16_t ta[3]={accentColor(),TFT_GREEN,TFT_ORANGE};
- for(int i=0;i<3;++i){tft.fillRoundRect(x[i],93,98,55,7,panel);tft.drawRoundRect(x[i],93,98,55,7,border);tft.setTextDatum(TC_DATUM);tft.setTextColor(ta[i],panel);tft.drawString(tl[i],x[i]+49,98,2);tft.setTextColor(primaryColor(),panel);tft.drawString(tv[i],x[i]+49,122,4);}
+ for(int i=0;i<3;++i){tft.fillRoundRect(x[i],93,98,55,7,panel);tft.drawRoundRect(x[i],93,98,55,7,border);tft.setTextDatum(TC_DATUM);drawBoldText(tl[i],x[i]+49,98,2,labelColor(),panel);tft.setTextColor(primaryColor(),panel);tft.drawString(tv[i],x[i]+49,122,4);}
  const char* sl[3]={"AVG","MAX","POINTS"};const String sv[3]={statisticSpeedText(summaryAverageSpeedKmh),statisticSpeedText(summaryMaximumSpeedKmh),String(summaryPointCount)};const uint16_t sa[3]={TFT_CYAN,TFT_ORANGE,TFT_GREEN};
- for(int i=0;i<3;++i){tft.fillRoundRect(x[i],153,98,59,7,panel);tft.drawRoundRect(x[i],153,98,59,7,border);tft.fillRoundRect(x[i]+4,157,5,51,2,sa[i]);tft.setTextDatum(TC_DATUM);tft.setTextColor(sa[i],panel);tft.drawString(sl[i],x[i]+53,157,2);tft.setTextColor(primaryColor(),panel);tft.drawString(sv[i],x[i]+53,180,4);}
- tft.setTextDatum(BC_DATUM);tft.setTextColor(accentColor(),bg);tft.drawString("TAP TO CONTINUE",160,237,2);
+ for(int i=0;i<3;++i){tft.fillRoundRect(x[i],153,98,59,7,panel);tft.drawRoundRect(x[i],153,98,59,7,border);tft.fillRoundRect(x[i]+4,157,5,51,2,sa[i]);tft.setTextDatum(TC_DATUM);drawBoldText(sl[i],x[i]+53,157,2,labelColor(),panel);tft.setTextColor(primaryColor(),panel);tft.drawString(sv[i],x[i]+53,180,4);}
+ tft.setTextDatum(BC_DATUM);drawBoldText("TAP TO CONTINUE",160,237,2,labelColor(),bg);
 }
 
 void showTripScreen() {
@@ -990,6 +999,43 @@ void drawStartupTestValue(int value) {
   tft.drawString(String(value), 160, 119, 7);
 }
 
+
+void drawStartupMotorcycle(int16_t x, int16_t y, uint16_t color) {
+  // Wheels, frame, fork, tank and rider: a tiny motorcycle made from primitives.
+  tft.drawCircle(x, y, 10, color); tft.drawCircle(x, y, 9, color);
+  tft.drawCircle(x + 43, y, 10, color); tft.drawCircle(x + 43, y, 9, color);
+  tft.drawLine(x, y, x + 14, y - 17, color);
+  tft.drawLine(x + 14, y - 17, x + 27, y, color);
+  tft.drawLine(x + 27, y, x, y, color);
+  tft.drawLine(x + 14, y - 17, x + 35, y - 17, color);
+  tft.drawLine(x + 35, y - 17, x + 43, y, color);
+  tft.fillRoundRect(x + 17, y - 25, 18, 8, 3, color);
+  tft.drawLine(x + 35, y - 17, x + 39, y - 30, color);
+  tft.drawLine(x + 36, y - 29, x + 44, y - 29, color);
+  tft.fillCircle(x + 20, y - 39, 5, color);
+  tft.drawLine(x + 20, y - 34, x + 15, y - 23, color);
+  tft.drawLine(x + 20, y - 33, x + 37, y - 28, color);
+}
+
+void runMotorcycleAnimation() {
+  const uint16_t bg = backgroundColor();
+  const uint16_t bikeColor = nightTheme ? TFT_CYAN : TFT_BLACK;
+  tft.fillScreen(bg);
+  tft.setTextDatum(TC_DATUM);
+  drawBoldText("MOTONAV", 160, 20, 4, labelColor(), bg);
+
+  for (int16_t x = -55; x <= 325; x += 8) {
+    tft.fillRect(0, 65, 320, 125, bg);
+    // Motion streaks behind the bike.
+    for (int i = 0; i < 3; ++i) {
+      const int16_t lineX = x - 20 - i * 18;
+      if (lineX > 0) tft.drawFastHLine(lineX, 152 + i * 7, 14, secondaryColor());
+    }
+    drawStartupMotorcycle(x, 155, bikeColor);
+    delay(18);
+  }
+}
+
 void runStartupAnimation() {
   const uint16_t bg = backgroundColor();
 
@@ -1013,13 +1059,13 @@ void runStartupAnimation() {
     delay(11);
   }
 
+  runMotorcycleAnimation();
+
   tft.fillScreen(bg);
   tft.setTextDatum(MC_DATUM);
-  tft.setTextColor(TFT_GREEN, bg);
-  tft.drawString("MOTONAV", 160, 91, 4);
-  tft.setTextColor(primaryColor(), bg);
-  tft.drawString("READY TO RIDE", 160, 137, 2);
-  delay(450);
+  drawBoldText("MOTONAV", 160, 91, 4, TFT_GREEN, bg);
+  drawBoldText("READY TO RIDE", 160, 137, 4, labelColor(), bg);
+  delay(3000);
 }
 
 void setup() {
