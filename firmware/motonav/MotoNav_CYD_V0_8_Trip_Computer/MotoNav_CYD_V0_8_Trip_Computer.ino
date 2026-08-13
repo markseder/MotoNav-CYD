@@ -101,6 +101,10 @@ constexpr float GAUGE_START_DEG = 160.0f;
 constexpr float GAUGE_SWEEP_DEG = 220.0f;
 constexpr int GAUGE_TICK_COUNT = 40;
 
+// Forward declarations required by the Arduino sketch preprocessor.
+void resetTrip(bool showNotice);
+void drawRideSummary();
+
 uint16_t backgroundColor() { return nightTheme ? TFT_BLACK : TFT_WHITE; }
 uint16_t primaryColor() { return nightTheme ? TFT_WHITE : TFT_BLACK; }
 uint16_t secondaryColor() { return nightTheme ? TFT_LIGHTGREY : TFT_DARKGREY; }
