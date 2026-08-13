@@ -30,6 +30,7 @@ uint32_t savedPointCount = 0;
 uint32_t nmeaChars = 0;
 uint32_t lastNmeaByteMs = 0;
 uint32_t lastScreenMs = 0;
+uint32_t lastGnssUiMs = 0;
 uint32_t touchStartedMs = 0;
 bool touchWasDown = false;
 bool longPressHandled = false;
@@ -122,6 +123,13 @@ String previousTrip;
 String previousAverage;
 String previousMaximum;
 String previousTimes;
+String previousGnssQuality;
+String previousGnssSatellites;
+String previousGnssHdop;
+String previousGnssAge;
+String previousGnssAltitude;
+String previousGnssLatitude;
+String previousGnssLongitude;
 
 constexpr int16_t GAUGE_CX = 160;
 constexpr int16_t GAUGE_CY = 126;
@@ -138,6 +146,7 @@ void resetTrip(bool showNotice);
 void drawRideSummary();
 void showSpeedScreen();
 void drawGnssDiagnostics();
+void updateGnssDiagnostics();
 void drawRideHistory();
 void drawMenu();
 bool validFix();
@@ -648,37 +657,109 @@ void drawDiagnosticCard(int16_t x, int16_t y, int16_t w,
   tft.drawString(value,x+w-8,y+24,2);
 }
 
-void drawGnssDiagnostics() {
-  uiMode = GNSS_UI;
-  const uint16_t bg = backgroundColor();
+void drawGnssCardFrame(int16_t x, int16_t y, int16_t w,
+                       const String &label, uint16_t accent) {
+  const uint16_t panel = nightTheme ? tft.color565(18,28,38)
+                                    : tft.color565(222,231,238);
+  const uint16_t border = nightTheme ? tft.color565(55,78,94)
+                                     : tft.color565(165,181,192);
+  tft.fillRoundRect(x,y,w,48,7,panel);
+  tft.drawRoundRect(x,y,w,48,7,border);
+  tft.fillRoundRect(x+4,y+4,5,40,2,accent);
+  tft.setTextDatum(TC_DATUM);
+  drawBoldText(label,x+w/2+3,y+4,2,labelColor(),panel);
+}
+
+void updateGnssCardValue(int16_t x, int16_t y, int16_t w,
+                         const String &value, String &previous) {
+  if (value == previous) return;
+  const uint16_t panel = nightTheme ? tft.color565(18,28,38)
+                                    : tft.color565(222,231,238);
+  tft.fillRect(x+12,y+25,w-18,19,panel);
+  tft.setTextDatum(MC_DATUM);
+  tft.setTextColor(primaryColor(),panel);
+  tft.drawString(value,x+w/2+3,y+34,2);
+  previous = value;
+}
+
+void updateGnssDiagnostics() {
+  if (uiMode != GNSS_UI) return;
+
   const String quality = gnssQualityText();
   const uint16_t qualityColor = quality=="GOOD" ? TFT_GREEN :
                                 quality=="WEAK" ? TFT_ORANGE : TFT_RED;
-  tft.fillScreen(bg);
-  tft.fillRoundRect(6,4,308,30,7,qualityColor);
-  tft.setTextDatum(ML_DATUM);
-  drawBoldText("GNSS",14,19,4,quality=="GOOD"?TFT_BLACK:TFT_WHITE,qualityColor);
-  tft.setTextDatum(MR_DATUM);
-  drawBoldText(quality,306,19,2,quality=="GOOD"?TFT_BLACK:TFT_WHITE,qualityColor);
+  if (quality != previousGnssQuality) {
+    tft.fillRoundRect(6,4,308,30,7,qualityColor);
+    const uint16_t headerText = quality=="GOOD" ? TFT_BLACK : TFT_WHITE;
+    tft.setTextDatum(ML_DATUM);
+    drawBoldText("GNSS",14,19,4,headerText,qualityColor);
+    tft.setTextDatum(MR_DATUM);
+    drawBoldText(quality,306,19,2,headerText,qualityColor);
+    previousGnssQuality = quality;
+  }
 
   const String sats = gps.satellites.isValid() ? String(gps.satellites.value()) : "--";
   const String hdop = gps.hdop.isValid() ? String(gps.hdop.hdop(),1) : "--";
   const String age = gps.location.isValid() ? String(gps.location.age())+" ms" : "--";
   const String altitude = gps.altitude.isValid() ? String(gps.altitude.meters(),1)+" m" : "--";
-  drawDiagnosticCard(6,40,151,"SATELLITES",sats,TFT_GREEN);
-  drawDiagnosticCard(163,40,151,"HDOP",hdop,TFT_ORANGE);
-  drawDiagnosticCard(6,93,151,"FIX AGE",age,TFT_CYAN);
-  drawDiagnosticCard(163,93,151,"ALTITUDE",altitude,TFT_BLUE);
+  updateGnssCardValue(6,40,151,sats,previousGnssSatellites);
+  updateGnssCardValue(163,40,151,hdop,previousGnssHdop);
+  updateGnssCardValue(6,93,151,age,previousGnssAge);
+  updateGnssCardValue(163,93,151,altitude,previousGnssAltitude);
 
-  const uint16_t panel=nightTheme?tft.color565(18,28,38):tft.color565(222,231,238);
+  const String latitude = gps.location.isValid() ? String(gps.location.lat(),6) : "--";
+  const String longitude = gps.location.isValid() ? String(gps.location.lng(),6) : "--";
+  const uint16_t panel = nightTheme ? tft.color565(18,28,38)
+                                    : tft.color565(222,231,238);
+  if (latitude != previousGnssLatitude) {
+    tft.fillRect(70,151,234,20,panel);
+    tft.setTextDatum(MR_DATUM);
+    tft.setTextColor(primaryColor(),panel);
+    tft.drawString(latitude,304,161,2);
+    previousGnssLatitude = latitude;
+  }
+  if (longitude != previousGnssLongitude) {
+    tft.fillRect(70,175,234,20,panel);
+    tft.setTextDatum(MR_DATUM);
+    tft.setTextColor(primaryColor(),panel);
+    tft.drawString(longitude,304,185,2);
+    previousGnssLongitude = longitude;
+  }
+}
+
+void drawGnssDiagnostics() {
+  uiMode = GNSS_UI;
+  const uint16_t bg = backgroundColor();
+  const uint16_t panel = nightTheme ? tft.color565(18,28,38)
+                                    : tft.color565(222,231,238);
+  const uint16_t border = nightTheme ? tft.color565(55,78,94)
+                                     : tft.color565(165,181,192);
+
+  // Clear and draw the fixed layout only once when entering this screen.
+  tft.fillScreen(bg);
+  drawGnssCardFrame(6,40,151,"SATELLITES",TFT_GREEN);
+  drawGnssCardFrame(163,40,151,"HDOP",TFT_ORANGE);
+  drawGnssCardFrame(6,93,151,"FIX AGE",TFT_CYAN);
+  drawGnssCardFrame(163,93,151,"ALTITUDE",TFT_BLUE);
+
   tft.fillRoundRect(6,146,308,66,7,panel);
-  tft.setTextDatum(TL_DATUM);tft.setTextColor(secondaryColor(),panel);
-  tft.drawString("LAT",16,154,2);tft.drawString("LON",16,178,2);
-  tft.setTextDatum(TR_DATUM);tft.setTextColor(primaryColor(),panel);
-  tft.drawString(gps.location.isValid()?String(gps.location.lat(),6):"--",304,154,2);
-  tft.drawString(gps.location.isValid()?String(gps.location.lng(),6):"--",304,178,2);
-  tft.setTextDatum(BC_DATUM);tft.setTextColor(secondaryColor(),bg);
+  tft.drawRoundRect(6,146,308,66,7,border);
+  tft.setTextDatum(ML_DATUM);
+  drawBoldText("LAT",16,161,2,labelColor(),panel);
+  drawBoldText("LON",16,185,2,labelColor(),panel);
+  tft.setTextDatum(BC_DATUM);
+  tft.setTextColor(secondaryColor(),bg);
   tft.drawString("TAP: MENU",160,238,1);
+
+  previousGnssQuality = "";
+  previousGnssSatellites = "";
+  previousGnssHdop = "";
+  previousGnssAge = "";
+  previousGnssAltitude = "";
+  previousGnssLatitude = "";
+  previousGnssLongitude = "";
+  updateGnssDiagnostics();
+  lastGnssUiMs = millis();
 }
 
 void drawRideHistory() {
@@ -1478,9 +1559,14 @@ void loop() {
     drawTrackBadge();
   }
 
-  if (millis() - lastScreenMs >= SCREEN_REFRESH_MS) {
+  if (uiMode == GNSS_UI) {
+    // GNSS data changes slowly; update only changed value regions at 2 Hz.
+    if (millis() - lastGnssUiMs >= 500UL) {
+      lastGnssUiMs = millis();
+      updateGnssDiagnostics();
+    }
+  } else if (millis() - lastScreenMs >= SCREEN_REFRESH_MS) {
     lastScreenMs = millis();
-    if (uiMode == GNSS_UI) drawGnssDiagnostics();
-    else updateDynamicScreen();
+    updateDynamicScreen();
   }
 }
