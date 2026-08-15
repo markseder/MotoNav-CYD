@@ -1,0 +1,2 @@
+version,date,time,gpx_file,distance_km,total_seconds,moving_seconds,stopped_seconds,average_kmh,maximum_kmh,gpx_points,completed
+1,2026-08-15,00:14:51,/TRK_20260815_001357.GPX,0.016,52,16,35,3.40,6.09,10,1
