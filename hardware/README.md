@@ -53,11 +53,11 @@ V1.0 использует ESP32 SPI3 через `SPIClass sdSpi(3)`. Это со
 ### English annotated version
 
 <p align="center">
-  <img src="images/MotoNav_CYD_hardware_wiring_EN.png" width="900" alt="MotoNav-CYD power and GNSS wiring with English annotations">
+  <img src="images/MotoNav_CYD_hardware_wiring_EN.jpg" width="900" alt="MotoNav-CYD power and GNSS wiring with English annotations">
 </p>
 
 ### Original assembly photo
 
 <p align="center">
-  <img src="images/MotoNav_CYD_hardware_wiring_original.png" width="900" alt="Original MotoNav-CYD experimental power and GNSS assembly">
+  <img src="images/MotoNav_CYD_hardware_wiring_original.jpg" width="900" alt="Original MotoNav-CYD experimental power and GNSS assembly">
 </p>
