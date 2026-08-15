@@ -2,6 +2,16 @@
 
 Здесь хранятся проверяемые версии прошивки MotoNav-CYD.
 
+## V1.1.2 Stable — текущая версия
+
+Скетч: [MotoNav_CYD_V1_1_2_Stable.ino](motonav/MotoNav_CYD_V1_1_2_Stable/MotoNav_CYD_V1_1_2_Stable.ino)
+
+V1.1.2 сохраняет поездочный компьютер, GPX, историю поездок и GNSS-диагностику V1.0. Главное изменение — плавная заставка: вся сцена pixel-art эндуро отрисовывается в спрайте, мотоцикл ускоренно проезжает экран и выполняет wheelie без полного стирания кадра и заметного мерцания.
+
+Скачивайте папку `MotoNav_CYD_V1_1_2_Stable` целиком: INO и `config.h` должны находиться рядом.
+
+Предыдущая резервная версия: [MotoNav_CYD_V1_0_Stable](motonav/MotoNav_CYD_V1_0_Stable).
+
 ## V0.1 — диагностика
 
 Скетч: [MotoNav_CYD_V0_1_Diagnostic.ino](diagnostic/MotoNav_CYD_V0_1_Diagnostic/MotoNav_CYD_V0_1_Diagnostic.ino)

@@ -1,4 +1,4 @@
-# MotoNav-CYD V1.0 — Quick Start
+# MotoNav-CYD V1.1.2 — Quick Start
 
 ## Русский
 
@@ -18,11 +18,11 @@
 | GND | GND |
 | VCC | согласно паспорту GNSS |
 
-RX GNSS для V1.0 не требуется.
+RX GNSS для V1.1.2 не требуется.
 
 ### 3. Прошивка
 
-1. Скачайте папку `firmware/motonav/MotoNav_CYD_V1_0_Stable` целиком.
+1. Скачайте папку `firmware/motonav/MotoNav_CYD_V1_1_2_Stable` целиком.
 2. Убедитесь, что INO и `config.h` лежат в одной папке.
 3. Откройте INO в Arduino IDE.
 4. Выберите совместимую ESP32-плату и правильный COM-порт.
@@ -55,11 +55,11 @@ RX GNSS для V1.0 не требуется.
 | GND | GND |
 | VCC | Follow the GNSS module specification |
 
-GNSS RX is not required for V1.0.
+GNSS RX is not required for V1.1.2.
 
 ### 3. Flashing
 
-1. Download the complete `firmware/motonav/MotoNav_CYD_V1_0_Stable` folder.
+1. Download the complete `firmware/motonav/MotoNav_CYD_V1_1_2_Stable` folder.
 2. Keep the INO file and `config.h` together.
 3. Open the INO file in Arduino IDE.
 4. Select a compatible ESP32 board and the correct serial port.
