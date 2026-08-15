@@ -103,6 +103,14 @@ At 5 km/h or above, menus, GNSS diagnostics, ride history and the final ride scr
 
 Format details: [microSD and CSV documentation](docs/STORAGE_FORMAT.md).
 
+Download real output samples recorded by MotoNav:
+
+- [GPX track](docs/examples/TRK_20260815_001357.GPX);
+- [per-ride CSV summary](docs/examples/TRK_20260815_001357.CSV);
+- [ride history index](docs/examples/RIDES_INDEX.CSV).
+
+Open GPX tracks in [QGIS](https://docs.qgis.org/latest/en/docs/user_manual/working_with_gps/plugins_gps.html), [Google Earth Pro](https://support.google.com/earth/answer/148095?hl=en), [GPXSee](https://gpxsee.org/) or [OsmAnd](https://osmand.net/docs/user/personal/tracks/manage-tracks/). A step-by-step QGIS example is included in the [storage documentation](docs/STORAGE_FORMAT.md#opening-a-gpx-track).
+
 ## Tested environment
 
 - ESP32 Arduino Core 3.3.10;
@@ -136,4 +144,4 @@ This is a DIY project. Use a fuse, transient protection, reliable connectors, vi
 
 ## License
 
-A project license has not yet been selected. Until a license is added, normal copyright restrictions apply. See the repository owner before redistributing modified firmware.
+MotoNav-CYD is released under the [MIT License](LICENSE). You may use, modify and redistribute the project while retaining the copyright and license notice.

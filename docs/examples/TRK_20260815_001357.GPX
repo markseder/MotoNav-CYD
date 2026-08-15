@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="MotoNav-CYD" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk><name>MotoNav ride</name><trkseg>
+    <trkpt lat="59.5773235" lon="150.8186695">
+      <ele>51.60</ele>
+      <time>2026-08-15T00:13:58Z</time>
+      <hdop>1.00</hdop>
+      <sat>10</sat>
+    </trkpt>
+    <trkpt lat="59.5773280" lon="150.8186485">
+      <ele>53.60</ele>
+      <time>2026-08-15T00:14:16Z</time>
+      <hdop>1.00</hdop>
+      <sat>10</sat>
+    </trkpt>
+    <trkpt lat="59.5773383" lon="150.8186208">
+      <ele>54.70</ele>
+      <time>2026-08-15T00:14:18Z</time>
+      <hdop>1.00</hdop>
+      <sat>10</sat>
+    </trkpt>
+    <trkpt lat="59.5773473" lon="150.8185878">
+      <ele>54.90</ele>
+      <time>2026-08-15T00:14:19Z</time>
+      <hdop>1.00</hdop>
+      <sat>10</sat>
+    </trkpt>
+    <trkpt lat="59.5773568" lon="150.8185528">
+      <ele>55.00</ele>
+      <time>2026-08-15T00:14:20Z</time>
+      <hdop>1.00</hdop>
+      <sat>10</sat>
+    </trkpt>
+    <trkpt lat="59.5773663" lon="150.8185153">
+      <ele>55.70</ele>
+      <time>2026-08-15T00:14:22Z</time>
+      <hdop>1.00</hdop>
+      <sat>10</sat>
+    </trkpt>
+    <trkpt lat="59.5773705" lon="150.8184728">
+      <ele>56.00</ele>
+      <time>2026-08-15T00:14:24Z</time>
+      <hdop>1.00</hdop>
+      <sat>10</sat>
+    </trkpt>
+    <trkpt lat="59.5773535" lon="150.8184953">
+      <ele>62.60</ele>
+      <time>2026-08-15T00:14:38Z</time>
+      <hdop>1.00</hdop>
+      <sat>10</sat>
+    </trkpt>
+    <trkpt lat="59.5773415" lon="150.8185123">
+      <ele>62.50</ele>
+      <time>2026-08-15T00:14:42Z</time>
+      <hdop>1.00</hdop>
+      <sat>10</sat>
+    </trkpt>
+    <trkpt lat="59.5773312" lon="150.8185300">
+      <ele>62.50</ele>
+      <time>2026-08-15T00:14:46Z</time>
+      <hdop>1.00</hdop>
+      <sat>10</sat>
+    </trkpt>
+  </trkseg></trk>
+</gpx>

@@ -25,3 +25,9 @@
 ## Спидометр — дневная тема
 
 ![Speedometer day](images/v1.0/speedometer-day.jpg)
+
+## Просмотр записанного GPX в QGIS
+
+На снимке открыт [реальный пример GPX](examples/TRK_20260815_001357.GPX), записанный MotoNav.
+
+![MotoNav GPX track opened in QGIS](images/examples/qgis-gpx-track.jpg)

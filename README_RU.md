@@ -90,6 +90,14 @@
 
 Описание колонок и примеры: [microSD и CSV](docs/STORAGE_FORMAT.md).
 
+Реальные примеры файлов, записанных MotoNav:
+
+- [трек GPX](docs/examples/TRK_20260815_001357.GPX);
+- [CSV одной поездки](docs/examples/TRK_20260815_001357.CSV);
+- [индекс истории поездок](docs/examples/RIDES_INDEX.CSV).
+
+GPX можно открыть в [QGIS](https://docs.qgis.org/latest/en/docs/user_manual/working_with_gps/plugins_gps.html), [Google Earth Pro](https://support.google.com/earth/answer/148095?hl=ru), [GPXSee](https://gpxsee.org/) или [OsmAnd](https://osmand.net/docs/user/personal/tracks/manage-tracks/). Пошаговый пример для QGIS находится в [документации microSD](docs/STORAGE_FORMAT.md#как-открыть-gpx-трек).
+
 ## Аппаратная платформа
 
 - ESP32-2432S028R (CYD);
@@ -129,5 +137,7 @@
 История развития: [ROADMAP](docs/ROADMAP.md). Технические источники: [references](references/README.md).
 
 ## Лицензия и ответственность
+
+MotoNav-CYD распространяется по свободной [лицензии MIT](LICENSE). Проект можно использовать, изменять и распространять при сохранении уведомления об авторских правах и текста лицензии.
 
 Проект предназначен для самостоятельной сборки и испытаний. Перед установкой на мотоцикл обеспечьте защищённое питание, предохранитель, надёжные соединения и влагозащиту. Не используйте устройство так, чтобы оно отвлекало от управления.
