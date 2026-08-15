@@ -1,129 +1,139 @@
 # MotoNav-CYD
 
-Открытый GPS-спидометр, поездочный компьютер и GPX-логгер для мотоцикла на базе **ESP32-2432S028R (CYD)**.
+**Open-source GPS motorcycle speedometer, trip computer and GPX logger for the ESP32-2432S028R Cheap Yellow Display.**
 
-> **Текущая версия: V1.1.2 Stable**
-> V1.1.2 сохраняет испытанную функциональность V1.0 и добавляет плавную полностью буферизированную заставку с pixel-art эндуро и анимацией wheelie без мерцания экрана.
+[![Stable release](https://img.shields.io/badge/stable-v1.1.2-20c997)](firmware/motonav/MotoNav_CYD_V1_1_2_Stable)
+![ESP32](https://img.shields.io/badge/platform-ESP32-E7352C)
+![Display](https://img.shields.io/badge/display-CYD%20320×240-00A6D6)
+![GNSS](https://img.shields.io/badge/input-NMEA%20GNSS-55C271)
+
+[English](README.md) · [Русский](README_RU.md) · [Quick Start](docs/QUICK_START.md) · [Hardware](hardware/README.md) · [Release notes](docs/RELEASE_NOTES_V1.1.2.md)
 
 <p align="center">
-  <img src="docs/images/v1.0/speedometer-road-test.jpg" width="520" alt="MotoNav-CYD V1.0 road test">
+  <img src="docs/images/branding/MotoNav_CYD_social_preview.jpg" width="900" alt="MotoNav-CYD open-source GPS motorcycle computer">
 </p>
 
-## Возможности
+## Current stable release: V1.1.2
 
-- крупный GPS-спидометр до 160 km/h с овальной шкалой;
-- автоматическое переключение между поездочным компьютером и спидометром;
-- пробег, средняя и максимальная скорость;
-- общее время, время движения и остановок;
-- ручная надёжная запись GPX на встроенную microSD;
-- итоговый экран **RIDE SAVED**;
-- индивидуальный CSV каждой поездки;
-- индекс **RIDES_INDEX.CSV** и просмотр последних 20 поездок на CYD;
-- живой экран GNSS: спутники, HDOP, возраст фикса, высота и координаты;
-- фильтрация скачков скорости, дистанции и ошибочных GPX-точек;
-- восстановление незакрытого GPX после внезапного отключения питания;
-- дневная и ночная темы;
-- km/h + km или mph + mi;
-- жирные FreeSansBold-шрифты и карточный интерфейс;
-- тест шкалы, плавная pixel-art анимация эндуро с wheelie и трёхсекундная заставка **READY TO RIDE**.
+V1.1.2 keeps the field-tested V1.0 trip and logging logic and adds a smooth, fully buffered startup animation: a detailed pixel-art enduro motorcycle crosses the screen, performs a wheelie and transitions to the arcade-style **READY TO RIDE** title without visible full-screen flicker.
 
-## Экраны
+> **Download:** [MotoNav-CYD V1.1.2 Stable ZIP](dist/MotoNav_CYD_V1_1_2_Stable.zip) — ready to extract and open in Arduino IDE. You can also browse the [source folder](firmware/motonav/MotoNav_CYD_V1_1_2_Stable).
+
+## Features
+
+- large GNSS speedometer with a full-width 0–160 km/h oval gauge;
+- automatic transition from trip computer to speedometer when movement begins;
+- trip distance, average speed and maximum speed;
+- total, moving and stopped time;
+- reliable manual GPX recording to the built-in microSD slot;
+- per-ride CSV statistics and `RIDES_INDEX.CSV`;
+- on-device history for the latest 20 rides;
+- live GNSS diagnostics: satellites, HDOP, fix age, altitude and coordinates;
+- filtering of speed spikes, distance jumps and invalid GPX points;
+- automatic repair of an unclosed GPX file after sudden power loss;
+- day and night themes;
+- km/h + km or mph + mi;
+- readable FreeSansBold typography and card-based UI;
+- buffered pixel-art startup animation and three-second **READY TO RIDE** screen.
+
+## Real device screens
 
 | GNSS diagnostics | Ride history | Ride saved |
 |---|---|---|
-| <img src="docs/images/v1.0/gnss-diagnostics.jpg" width="260"> | <img src="docs/images/v1.0/ride-history.jpg" width="260"> | <img src="docs/images/v1.0/ride-saved-dark.jpg" width="260"> |
+| <img src="docs/images/v1.0/gnss-diagnostics.jpg" width="260" alt="MotoNav-CYD GNSS diagnostics"> | <img src="docs/images/v1.0/ride-history.jpg" width="260" alt="MotoNav-CYD ride history"> | <img src="docs/images/v1.0/ride-saved-dark.jpg" width="260" alt="MotoNav-CYD ride summary"> |
 
-Дополнительные фотографии: [галерея V1.0](docs/PHOTOS.md).
+More real-device photographs: [V1.0 photo gallery](docs/PHOTOS.md).
 
-## Быстрый старт
+## Hardware
 
-1. Скачайте **всю папку** [MotoNav_CYD_V1_1_2_Stable](firmware/motonav/MotoNav_CYD_V1_1_2_Stable).
-2. Установите в Arduino IDE плату ESP32 и библиотеки:
-   - TFT_eSPI;
-   - TinyGPSPlus;
-   - XPT2046_Touchscreen.
-3. Настройте TFT_eSPI под ESP32-2432S028R/CYD.
-4. Подключите TX GNSS-приёмника к **GPIO35**, землю к GND, питание — по паспорту модуля.
-5. Вставьте microSD, отформатированную в FAT32.
-6. Откройте [MotoNav_CYD_V1_1_2_Stable.ino](firmware/motonav/MotoNav_CYD_V1_1_2_Stable/MotoNav_CYD_V1_1_2_Stable.ino), выберите плату и загрузите прошивку.
+- ESP32-2432S028R / CYD;
+- ILI9341 320×240 TFT;
+- XPT2046 touchscreen;
+- built-in microSD slot;
+- external UART GNSS receiver producing NMEA at 9600 baud;
+- tested with GT-U12 and ATGM336H-compatible wiring.
 
-Подробно: [Quick Start на русском и английском](docs/QUICK_START.md).
+### GNSS connection
 
-## Управление
+| GNSS module | CYD | Purpose |
+|---|---:|---|
+| TX | GPIO35 | NMEA input to ESP32 |
+| GND | GND | Common ground |
+| VCC | Per module specification | Check the required voltage first |
+| RX | Not connected | V1.1.2 does not send GNSS commands |
 
-| Действие | Результат |
+<p align="center">
+  <img src="hardware/images/MotoNav_CYD_hardware_wiring_EN.jpg" width="850" alt="MotoNav-CYD motorcycle power and GNSS wiring">
+</p>
+
+Do not connect the CYD directly to a motorcycle 12 V system. Use a fused, protected and regulated 5 V supply. See the complete [hardware guide](hardware/README.md).
+
+## Quick start
+
+1. Download the complete [MotoNav_CYD_V1_1_2_Stable](firmware/motonav/MotoNav_CYD_V1_1_2_Stable) directory.
+2. Install ESP32 board support in Arduino IDE.
+3. Install `TFT_eSPI`, `TinyGPSPlus` and `XPT2046_Touchscreen`.
+4. Configure TFT_eSPI for your ESP32-2432S028R revision.
+5. Connect GNSS TX to GPIO35, connect GND and supply the GNSS module with its specified voltage.
+6. Insert a FAT32-formatted microSD card.
+7. Open `MotoNav_CYD_V1_1_2_Stable.ino`, compile and upload.
+
+Full instructions in English and Russian: [Quick Start](docs/QUICK_START.md).
+
+## Operation
+
+| Action | Result |
 |---|---|
-| Короткое касание главного экрана | смена дневной/ночной темы |
-| Удержание около 1,5 с на остановке | открыть меню |
-| TRACK → START TRACK | начать новую запись |
-| TRACK → FINISH | завершить и сохранить поездку |
-| RIDES | посмотреть последние поездки |
-| GNSS | открыть живую диагностику |
-| SETTINGS | тема и единицы измерения |
+| Short tap on the main screen | Toggle day/night theme |
+| Hold for about 1.5 seconds while stopped | Open menu |
+| `TRACK → START TRACK` | Start a new GPX recording |
+| `TRACK → FINISH` | Finish and save the ride |
+| `RIDES` | Browse recent ride summaries |
+| `GNSS` | Open live GNSS diagnostics |
+| `SETTINGS` | Change theme and units |
 
-При скорости от **5 km/h** меню, GNSS, история и итоговый экран закрываются автоматически. Из экранов **RIDES** и **RIDE SAVED** устройство сразу переходит на крупный спидометр.
+At 5 km/h or above, menus, GNSS diagnostics, ride history and the final ride screen close automatically and MotoNav switches to the large speedometer.
 
-## Запись и защита трека
+## Files written to microSD
 
-- **WAIT FIX** — ожидание координат;
-- **REC N** — запись активна, N — реально записанные точки;
-- **SAVED N** — GPX и статистика сохранены;
-- **SD ERROR** — ошибка карты или записи;
-- данные сбрасываются на microSD каждые 2 секунды;
-- при остановке во время записи появляется большая кнопка **STOP RECORD?**;
-- после обрыва питания незакрытый GPX автоматически дополняется завершающими XML-тегами при следующем запуске.
+- `TRK_YYYYMMDD_HHMMSS.GPX` — route track;
+- `TRK_YYYYMMDD_HHMMSS.CSV` — statistics for one ride;
+- `RIDES_INDEX.CSV` — compact index used by the on-device ride browser;
+- `ACTIVE_TRACK.TXT` — temporary recovery marker removed after a normal finish.
 
-Запуск и завершение записи намеренно оставлены ручными.
+Format details: [microSD and CSV documentation](docs/STORAGE_FORMAT.md).
 
-## Файлы на microSD
-
-После поездок на карте появляются:
-
-- `TRK_YYYYMMDD_HHMMSS.GPX` — маршрут;
-- `TRK_YYYYMMDD_HHMMSS.CSV` — статистика конкретной поездки;
-- `RIDES_INDEX.CSV` — быстрый индекс для экрана RIDES;
-- `ACTIVE_TRACK.TXT` — временный служебный маркер, автоматически удаляемый после штатного завершения.
-
-Описание колонок и примеры: [microSD и CSV](docs/STORAGE_FORMAT.md).
-
-## Аппаратная платформа
-
-- ESP32-2432S028R (CYD);
-- ILI9341 320×240;
-- XPT2046;
-- встроенный слот microSD;
-- внешний UART GNSS с NMEA, 9600 baud;
-- проверено с GT-U12.
-
-Подключение и пины: [hardware/README.md](hardware/README.md).
-
-## Проверенная среда
+## Tested environment
 
 - ESP32 Arduino Core 3.3.10;
-- стандартная ESP32-библиотека SD;
-- TFT_eSPI с включёнными GFXFF/FreeSansBold;
-- CYD в горизонтальной ориентации, `setRotation(1)`.
+- ESP32 built-in SD library;
+- TFT_eSPI with GFXFF/FreeSansBold enabled;
+- CYD landscape orientation with `setRotation(1)`.
 
-Шрифты FreeSansBold уже подключаются через TFT_eSPI. Не добавляйте вручную повторные `#include FreeSansBold*.h` в скетч — это вызывает ошибку redefinition.
+FreeSansBold is already included through TFT_eSPI. Do not add duplicate `#include FreeSansBold*.h` directives to the sketch, because that causes redefinition errors.
 
-## Ограничения V1.1.2
+## Limitations
 
-- нет карты и навигационных подсказок;
-- GPX нельзя просматривать или удалять на CYD;
-- после восстановления оборванного GPX итоговый CSV не создаётся автоматически;
-- незавершённая поездочная статистика после полного обесточивания не восстанавливается;
-- точность зависит от GNSS-модуля, антенны, обзора неба и качества фикса.
+- no maps, route guidance or turn-by-turn navigation;
+- GPX files cannot yet be viewed or deleted on the CYD;
+- recovery of an interrupted GPX does not automatically recreate its final CSV summary;
+- unfinished trip statistics are not restored after complete power loss;
+- accuracy depends on the GNSS receiver, antenna placement, sky visibility and fix quality.
 
-## Версии
+## Versions
 
-- **V1.1.2 Stable** — текущий стабильный релиз с плавной буферизированной заставкой;
-- **V1.0 Stable** — предыдущий стабильный релиз и резервная версия;
-- **V0.9** — испытанная функциональная база V1.0;
-- **V0.8** — предыдущая стабильная версия;
-- **V0.7** — резервная версия надёжной GPX-записи.
+- **V1.1.2 Stable** — current stable release with the smooth buffered startup animation;
+- **V1.0 Stable** — previous stable release and rollback option;
+- **V0.9** — field-tested feature base for V1.0;
+- **V0.8** — trip computer milestone;
+- **V0.7** — reliable GPX recording milestone.
 
-История развития: [ROADMAP](docs/ROADMAP.md). Технические источники: [references](references/README.md).
+Development history: [Roadmap](docs/ROADMAP.md). Technical references: [references](references/README.md).
 
-## Лицензия и ответственность
+## Safety
 
-Проект предназначен для самостоятельной сборки и испытаний. Перед установкой на мотоцикл обеспечьте защищённое питание, предохранитель, надёжные соединения и влагозащиту. Не используйте устройство так, чтобы оно отвлекало от управления.
+This is a DIY project. Use a fuse, transient protection, reliable connectors, vibration isolation and a weather-resistant enclosure before installing it on a motorcycle. Mount the display where it does not obstruct controls or distract the rider.
+
+## License
+
+A project license has not yet been selected. Until a license is added, normal copyright restrictions apply. See the repository owner before redistributing modified firmware.
