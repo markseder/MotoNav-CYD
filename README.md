@@ -7,7 +7,7 @@
 ![Display](https://img.shields.io/badge/display-CYD%20320×240-00A6D6)
 ![GNSS](https://img.shields.io/badge/input-NMEA%20GNSS-55C271)
 
-[English](README.md) · [Русский](README_RU.md) · [Quick Start](docs/QUICK_START.md) · [Hardware](hardware/README.md) · [Release notes](docs/RELEASE_NOTES_V1.1.2.md)
+[English](README.md) · [Русский](README_RU.md) · [Quick Start](docs/QUICK_START.md) · [Configuration](docs/CONFIGURATION.md) · [Hardware](hardware/README.md) · [Release notes](docs/RELEASE_NOTES_V1.1.2.md)
 
 <p align="center">
   <img src="docs/images/branding/MotoNav_CYD_social_preview.jpg" width="900" alt="MotoNav-CYD open-source GPS motorcycle computer">
@@ -50,7 +50,7 @@ More real-device photographs: [V1.0 photo gallery](docs/PHOTOS.md).
 - ILI9341 320×240 TFT;
 - XPT2046 touchscreen;
 - built-in microSD slot;
-- external UART GNSS receiver producing NMEA at 9600 baud;
+- external UART GNSS receiver producing NMEA at a configurable baud rate;
 - tested with GT-U12 and ATGM336H-compatible wiring.
 
 ### GNSS connection
@@ -75,10 +75,11 @@ Do not connect the CYD directly to a motorcycle 12 V system. Use a fused, protec
 3. Install `TFT_eSPI`, `TinyGPSPlus` and `XPT2046_Touchscreen`.
 4. Configure TFT_eSPI for your ESP32-2432S028R revision.
 5. Connect GNSS TX to GPIO35, connect GND and supply the GNSS module with its specified voltage.
-6. Insert a FAT32-formatted microSD card.
-7. Open `MotoNav_CYD_V1_1_2_Stable.ino`, compile and upload.
+6. Set `GNSS_BAUD` in `config.h` to match the receiver. QUESCAN G10A-F30 uses `38400` baud by default.
+7. Insert a FAT32-formatted microSD card.
+8. Open `MotoNav_CYD_V1_1_2_Stable.ino`, compile and upload.
 
-Full instructions in English and Russian: [Quick Start](docs/QUICK_START.md).
+Full instructions: [Quick Start](docs/QUICK_START.md) and the bilingual [`config.h` configuration guide](docs/CONFIGURATION.md).
 
 ## Operation
 

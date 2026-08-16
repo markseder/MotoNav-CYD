@@ -1,6 +1,6 @@
 # MotoNav-CYD
 
-[English](README.md) · [Русский](README_RU.md) · [Быстрый старт](docs/QUICK_START.md) · [Аппаратная часть](hardware/README.md)
+[English](README.md) · [Русский](README_RU.md) · [Быстрый старт](docs/QUICK_START.md) · [Настройка config.h](docs/CONFIGURATION.md#русский) · [Аппаратная часть](hardware/README.md)
 
 Открытый GPS-спидометр, поездочный компьютер и GPX-логгер для мотоцикла на базе **ESP32-2432S028R (CYD)**.
 
@@ -48,10 +48,11 @@
    - XPT2046_Touchscreen.
 3. Настройте TFT_eSPI под ESP32-2432S028R/CYD.
 4. Подключите TX GNSS-приёмника к **GPIO35**, землю к GND, питание — по паспорту модуля.
-5. Вставьте microSD, отформатированную в FAT32.
-6. Откройте [MotoNav_CYD_V1_1_2_Stable.ino](firmware/motonav/MotoNav_CYD_V1_1_2_Stable/MotoNav_CYD_V1_1_2_Stable.ino), выберите плату и загрузите прошивку.
+5. Укажите скорость приёмника в `GNSS_BAUD` файла `config.h`. Для QUESCAN G10A-F30 по умолчанию используется `38400` бод.
+6. Вставьте microSD, отформатированную в FAT32.
+7. Откройте [MotoNav_CYD_V1_1_2_Stable.ino](firmware/motonav/MotoNav_CYD_V1_1_2_Stable/MotoNav_CYD_V1_1_2_Stable.ino), выберите плату и загрузите прошивку.
 
-Подробно: [Quick Start на русском и английском](docs/QUICK_START.md).
+Подробно: [Quick Start на русском и английском](docs/QUICK_START.md) и [туториал по настройке `config.h`](docs/CONFIGURATION.md#русский).
 
 ## Управление
 
@@ -104,7 +105,7 @@ GPX можно открыть в [QGIS](https://docs.qgis.org/latest/en/docs/use
 - ILI9341 320×240;
 - XPT2046;
 - встроенный слот microSD;
-- внешний UART GNSS с NMEA, 9600 baud;
+- внешний UART GNSS с NMEA и настраиваемой скоростью UART;
 - проверено с GT-U12.
 
 Подключение и пины: [hardware/README.md](hardware/README.md).
