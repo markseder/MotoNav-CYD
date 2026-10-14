@@ -1,3 +1,5 @@
+> **FNK0104B port:** The current V1.1.2 source now targets Freenove ESP32-S3 Display FNK0104B. See [wiring and build instructions](docs/FREENOVE_FNK0104B.md). Historical sketches and the dist ZIP remain CYD releases.
+
 # MotoNav-CYD
 
 [English](README.md) · [Русский](README_RU.md) · [Быстрый старт](docs/QUICK_START.md) · [Настройка config.h](docs/CONFIGURATION.md#русский) · [Аппаратная часть](hardware/README.md)

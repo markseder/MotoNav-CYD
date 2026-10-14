@@ -1,20 +1,26 @@
 #pragma once
 
-constexpr int GNSS_UART_NUMBER = 2;
-constexpr int GNSS_RX_PIN = 35;
+// Freenove FNK0104B: GPIO21 is available on the Expanded IO connector.
+constexpr int GNSS_UART_NUMBER = 1;
+constexpr int GNSS_RX_PIN = 21;
 constexpr int GNSS_TX_PIN = -1;
 constexpr uint32_t GNSS_BAUD = 9600;
 
-constexpr int TOUCH_CS_PIN = 33;
-constexpr int TOUCH_IRQ_PIN = 36;
-constexpr int TOUCH_MOSI_PIN = 32;
-constexpr int TOUCH_MISO_PIN = 39;
-constexpr int TOUCH_CLK_PIN = 25;
+constexpr int TOUCH_SDA_PIN = 16;
+constexpr int TOUCH_SCL_PIN = 15;
+constexpr int TOUCH_IRQ_PIN = 17;
+constexpr int TOUCH_RESET_PIN = 18;
+constexpr uint8_t TOUCH_I2C_ADDRESS = 0x38;
+constexpr uint32_t TOUCH_POLL_MS = 20;
 
-constexpr int SD_CS_PIN = 5;
-constexpr int SD_SCK_PIN = 18;
-constexpr int SD_MISO_PIN = 19;
-constexpr int SD_MOSI_PIN = 23;
+constexpr int SD_CLK_PIN = 38;
+constexpr int SD_CMD_PIN = 40;
+constexpr int SD_D0_PIN = 39;
+constexpr int SD_D1_PIN = 41;
+constexpr int SD_D2_PIN = 48;
+constexpr int SD_D3_PIN = 47;
+constexpr int AUDIO_ENABLE_PIN = 1;
+constexpr int RGB_LED_PIN = 42;
 
 constexpr uint32_t GNSS_DATA_TIMEOUT_MS = 3000;
 constexpr uint32_t SCREEN_REFRESH_MS = 200;

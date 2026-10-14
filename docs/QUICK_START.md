@@ -1,3 +1,5 @@
+> **Current V1.1.2 source: Freenove FNK0104B.** Use the [FNK0104B guide](FREENOVE_FNK0104B.md) for the current source. The CYD instructions below apply to historical firmware and the original dist ZIP.
+
 # MotoNav-CYD V1.1.2 — Quick Start
 
 ## Русский

@@ -1,14 +1,16 @@
-# MotoNav-CYD V1.1.2 configuration guide
+# MotoNav-FNK0104B V1.1.2 configuration guide
 
 [English](#english) · [Русский](#русский)
 
 The firmware-specific settings are stored in:
 
 ```text
-firmware/motonav/MotoNav_CYD_V1_1_2_Stable/config.h
+firmware/motonav/MotoNav_FNK0104B_V1_1_2_Stable/config.h
 ```
 
-Keep `config.h` in the same directory as `MotoNav_CYD_V1_1_2_Stable.ino`. After changing it, compile and upload the sketch again.
+See the [FNK0104B guide](FREENOVE_FNK0104B.md) for display, capacitive touch, SDMMC, and ESP32-S3 board configuration. GNSS TX now connects to GPIO21 on the Expanded IO connector.
+
+Keep `config.h` in the same directory as `MotoNav_FNK0104B_V1_1_2_Stable.ino`. After changing it, compile and upload the sketch again.
 
 ## English
 
@@ -34,9 +36,9 @@ gnssSerial.begin(GNSS_BAUD, SERIAL_8N1, GNSS_RX_PIN, GNSS_TX_PIN);
 
 Use this wiring:
 
-| QUESCAN G10A-F30 | CYD |
+| QUESCAN G10A-F30 | FNK0104B |
 |---|---|
-| TX | GPIO35 |
+| TX | GPIO21 |
 | GND | GND |
 | VCC | Supply voltage specified for the exact module |
 | RX | Not connected |
@@ -44,7 +46,7 @@ Use this wiring:
 The resulting GNSS block in `config.h` is:
 
 ```cpp
-constexpr int GNSS_UART_NUMBER = 2;
+constexpr int GNSS_UART_NUMBER = 1;
 constexpr int GNSS_RX_PIN = 35;
 constexpr int GNSS_TX_PIN = -1;
 constexpr uint32_t GNSS_BAUD = 38400;
@@ -58,8 +60,8 @@ constexpr uint32_t GNSS_BAUD = 38400;
 
 | Setting | Default | Meaning |
 |---|---:|---|
-| `GNSS_UART_NUMBER` | `2` | ESP32 hardware UART; normally leave unchanged |
-| `GNSS_RX_PIN` | `35` | CYD input receiving NMEA from GNSS TX |
+| `GNSS_UART_NUMBER` | `1` | ESP32 hardware UART; normally leave unchanged |
+| `GNSS_RX_PIN` | `21` | FNK0104B input receiving NMEA from GNSS TX |
 | `GNSS_TX_PIN` | `-1` | ESP32 transmission disabled |
 | `GNSS_BAUD` | `9600` | Must exactly match the GNSS module UART speed |
 | `GNSS_DATA_TIMEOUT_MS` | `3000` | GNSS data is considered lost after 3 seconds without bytes |
@@ -122,7 +124,7 @@ Lower alpha values produce smoother but slower response. Increase them only in s
 4. Move the antenna outdoors and wait for satellites and **GNSS FIX**.
 5. Start a short test track and verify that a GPX file appears on the microSD card.
 
-If the character counter remains at zero, check the baud rate first, then verify **GNSS TX → GPIO35**, common ground and module supply voltage. If characters arrive but there is no fix, the serial connection works; move the antenna outdoors and check its installation.
+If the character counter remains at zero, check the baud rate first, then verify **GNSS TX → GPIO21**, common ground and module supply voltage. If characters arrive but there is no fix, the serial connection works; move the antenna outdoors and check its installation.
 
 ## Русский
 
@@ -144,9 +146,9 @@ constexpr uint32_t GNSS_BAUD = 38400;
 
 Подключение:
 
-| QUESCAN G10A-F30 | CYD |
+| QUESCAN G10A-F30 | FNK0104B |
 |---|---|
-| TX | GPIO35 |
+| TX | GPIO21 |
 | GND | GND |
 | VCC | По паспорту конкретной версии модуля |
 | RX | Не подключать |
@@ -154,13 +156,13 @@ constexpr uint32_t GNSS_BAUD = 38400;
 Готовый блок GNSS:
 
 ```cpp
-constexpr int GNSS_UART_NUMBER = 2;
+constexpr int GNSS_UART_NUMBER = 1;
 constexpr int GNSS_RX_PIN = 35;
 constexpr int GNSS_TX_PIN = -1;
 constexpr uint32_t GNSS_BAUD = 38400;
 ```
 
-Название `GNSS_RX_PIN` относится к входу ESP32, поэтому к GPIO35 подключается провод **TX модуля**. Значение `GNSS_TX_PIN = -1` отключает передачу из MotoNav: прошивка V1.1.2 только принимает NMEA.
+Название `GNSS_RX_PIN` относится к входу ESP32, поэтому к GPIO21 подключается провод **TX модуля**. Значение `GNSS_TX_PIN = -1` отключает передачу из MotoNav: прошивка V1.1.2 только принимает NMEA.
 
 ### Справочник параметров
 
@@ -168,8 +170,8 @@ constexpr uint32_t GNSS_BAUD = 38400;
 
 | Параметр | По умолчанию | Назначение |
 |---|---:|---|
-| `GNSS_UART_NUMBER` | `2` | аппаратный UART ESP32; обычно не менять |
-| `GNSS_RX_PIN` | `35` | вход CYD для NMEA с выхода TX приёмника |
+| `GNSS_UART_NUMBER` | `1` | аппаратный UART ESP32; обычно не менять |
+| `GNSS_RX_PIN` | `21` | вход FNK0104B для NMEA с выхода TX приёмника |
 | `GNSS_TX_PIN` | `-1` | передача из ESP32 отключена |
 | `GNSS_BAUD` | `9600` | скорость должна точно совпадать с модулем |
 | `GNSS_DATA_TIMEOUT_MS` | `3000` | потеря связи после 3 секунд без данных |
@@ -226,10 +228,10 @@ constexpr uint32_t GNSS_BAUD = 115200; // только если модуль н�
 
 ### Проверка после прошивки
 
-1. Подайте питание на GNSS и CYD с общей землёй.
+1. Подайте питание на GNSS и FNK0104B с общей землёй.
 2. Откройте **MENU → GNSS**.
 3. Убедитесь, что счётчик принятых символов увеличивается.
 4. Вынесите антенну на открытое место и дождитесь спутников и **GNSS FIX**.
 5. Запишите короткий тестовый трек и проверьте появление GPX на microSD.
 
-Если счётчик символов остаётся нулевым, сначала проверьте скорость UART, затем соединение **GNSS TX → GPIO35**, общую землю и напряжение питания. Если символы идут, но фикса нет, UART уже работает — модулю нужен открытый обзор неба или проверка установки антенны.
+Если счётчик символов остаётся нулевым, сначала проверьте скорость UART, затем соединение **GNSS TX → GPIO21**, общую землю и напряжение питания. Если символы идут, но фикса нет, UART уже работает — модулю нужен открытый обзор неба или проверка установки антенны.

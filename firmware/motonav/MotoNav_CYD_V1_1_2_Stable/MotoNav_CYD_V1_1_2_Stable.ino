@@ -2,23 +2,26 @@
 #include <TFT_eSPI.h>
 #include <TinyGPSPlus.h>
 #include <SPI.h>
-#include <XPT2046_Touchscreen.h>
-#include <SD.h>
+#include "fnk0104b_touch.h"
+#include <esp32-hal-rgb-led.h>
+#include <SD_MMC.h>
 #include <FS.h>
 #include <Preferences.h>
 
 #include "config.h"
 
+#if !defined(CONFIG_IDF_TARGET_ESP32S3)
+#error "Select ESP32S3 Dev Module for the Freenove FNK0104B firmware"
+#endif
+#if !defined(USER_SETUP_LOADED) || TFT_MOSI != 11 || TFT_DC != 46
+#error "Apply fnk0104b_tft_setup.h to the sketch AND TFT_eSPI library; see docs/FREENOVE_FNK0104B.md"
+#endif
+
 TFT_eSPI tft;
 TFT_eSprite speedSprite(&tft);
 TinyGPSPlus gps;
 HardwareSerial gnssSerial(GNSS_UART_NUMBER);
-SPIClass touchSpi(HSPI);
-// CYD microSD uses the ESP32 SPI3 controller (legacy VSPI).
-// Numeric host 3 keeps compatibility with ESP32 Core 3.x where VSPI may be hidden.
-SPIClass sdSpi(3);
 File trackFile;
-XPT2046_Touchscreen touch(TOUCH_CS_PIN, TOUCH_IRQ_PIN);
 Preferences preferences;
 
 bool nightTheme = true;
@@ -82,10 +85,6 @@ constexpr uint32_t STOP_REMINDER_DELAY_MS = 15000UL;
 uint32_t trackStoppedStartedMs = 0;
 bool stopRecordReminderVisible = false;
 
-constexpr int16_t TOUCH_X_MIN = 250;
-constexpr int16_t TOUCH_X_MAX = 3850;
-constexpr int16_t TOUCH_Y_MIN = 250;
-constexpr int16_t TOUCH_Y_MAX = 3850;
 
 enum ScreenMode { TRIP_SCREEN, SPEED_SCREEN };
 ScreenMode screenMode = TRIP_SCREEN;
@@ -214,8 +213,10 @@ void drawTrackBadge() {
 
 bool initializeSd() {
   if (sdReady) return true;
-  sdSpi.begin(SD_SCK_PIN, SD_MISO_PIN, SD_MOSI_PIN, SD_CS_PIN);
-  sdReady = SD.begin(SD_CS_PIN, sdSpi) && SD.cardType() != CARD_NONE;
+  sdReady = SD_MMC.setPins(SD_CLK_PIN, SD_CMD_PIN, SD_D0_PIN,
+                            SD_D1_PIN, SD_D2_PIN, SD_D3_PIN) &&
+            SD_MMC.begin("/sdcard", false, false, SDMMC_FREQ_DEFAULT) &&
+            SD_MMC.cardType() != CARD_NONE;
   sdError = !sdReady;
   Serial.println(sdReady ? "microSD ready" : "ERROR: microSD initialization failed");
   return sdReady;
@@ -241,8 +242,8 @@ String statisticsFileName(const String &gpxName) {
 }
 
 bool writeActiveTrackMarker(const String &gpxName) {
-  SD.remove(ACTIVE_TRACK_MARKER);
-  File marker = SD.open(ACTIVE_TRACK_MARKER, FILE_WRITE);
+  SD_MMC.remove(ACTIVE_TRACK_MARKER);
+  File marker = SD_MMC.open(ACTIVE_TRACK_MARKER, FILE_WRITE);
   if (!marker) return false;
   marker.println(gpxName);
   marker.flush();
@@ -252,7 +253,7 @@ bool writeActiveTrackMarker(const String &gpxName) {
 }
 
 void clearActiveTrackMarker() {
-  if (SD.exists(ACTIVE_TRACK_MARKER)) SD.remove(ACTIVE_TRACK_MARKER);
+  if (SD_MMC.exists(ACTIVE_TRACK_MARKER)) SD_MMC.remove(ACTIVE_TRACK_MARKER);
 }
 
 bool gpxAlreadyClosed(File &file) {
@@ -265,25 +266,25 @@ bool gpxAlreadyClosed(File &file) {
 }
 
 void recoverInterruptedTrack() {
-  if (!sdReady || !SD.exists(ACTIVE_TRACK_MARKER)) return;
+  if (!sdReady || !SD_MMC.exists(ACTIVE_TRACK_MARKER)) return;
 
-  File marker = SD.open(ACTIVE_TRACK_MARKER, FILE_READ);
+  File marker = SD_MMC.open(ACTIVE_TRACK_MARKER, FILE_READ);
   if (!marker) return;
   String interruptedName = marker.readStringUntil('\n');
   marker.close();
   interruptedName.trim();
-  if (interruptedName.length() == 0 || !SD.exists(interruptedName)) {
+  if (interruptedName.length() == 0 || !SD_MMC.exists(interruptedName)) {
     clearActiveTrackMarker();
     return;
   }
 
-  File interrupted = SD.open(interruptedName, FILE_READ);
+  File interrupted = SD_MMC.open(interruptedName, FILE_READ);
   const bool alreadyClosed = gpxAlreadyClosed(interrupted);
   interrupted.close();
 
   bool recovered = alreadyClosed;
   if (!alreadyClosed) {
-    interrupted = SD.open(interruptedName, FILE_APPEND);
+    interrupted = SD_MMC.open(interruptedName, FILE_APPEND);
     if (interrupted) {
       interrupted.println("  </trkseg></trk>");
       interrupted.println("</gpx>");
@@ -312,8 +313,8 @@ String csvField(const String &line, uint8_t index) {
 }
 
 bool appendRideIndex(const String &dateText, const String &timeText) {
-  const bool newFile = !SD.exists(RIDES_INDEX_FILE);
-  File index = SD.open(RIDES_INDEX_FILE, FILE_APPEND);
+  const bool newFile = !SD_MMC.exists(RIDES_INDEX_FILE);
+  File index = SD_MMC.open(RIDES_INDEX_FILE, FILE_APPEND);
   if (!index) return false;
   if (newFile) {
     index.println("version,date,time,gpx_file,distance_km,total_seconds,moving_seconds,stopped_seconds,average_kmh,maximum_kmh,gpx_points");
@@ -349,8 +350,8 @@ bool saveRideStatistics() {
   const String timeText(timeBuffer);
   const String csvName = statisticsFileName(summaryTrackFileName);
 
-  SD.remove(csvName);
-  File stats = SD.open(csvName, FILE_WRITE);
+  SD_MMC.remove(csvName);
+  File stats = SD_MMC.open(csvName, FILE_WRITE);
   if (!stats) return false;
   stats.println("version,date,time,gpx_file,distance_km,total_seconds,moving_seconds,stopped_seconds,average_kmh,maximum_kmh,gpx_points,completed");
   stats.printf("1,%s,%s,%s,%.3f,%lu,%lu,%lu,%.2f,%.2f,%lu,1\n",
@@ -385,8 +386,8 @@ bool parseRideIndexLine(const String &line, RideRecord &ride) {
 void loadRideHistory() {
   rideHistoryCount = 0;
   selectedRideIndex = 0;
-  if (!initializeSd() || !SD.exists(RIDES_INDEX_FILE)) return;
-  File index = SD.open(RIDES_INDEX_FILE, FILE_READ);
+  if (!initializeSd() || !SD_MMC.exists(RIDES_INDEX_FILE)) return;
+  File index = SD_MMC.open(RIDES_INDEX_FILE, FILE_READ);
   if (!index) return;
   while (index.available()) {
     String line = index.readStringUntil('\n');
@@ -413,7 +414,7 @@ bool openTrackFile() {
     return false;
   }
   trackFileName = makeTrackFileName();
-  trackFile = SD.open(trackFileName, FILE_WRITE);
+  trackFile = SD_MMC.open(trackFileName, FILE_WRITE);
   if (!trackFile) {
     sdError = true;
     drawTrackBadge();
@@ -425,7 +426,7 @@ bool openTrackFile() {
   trackFile.flush();
   if (trackFile.getWriteError() || !writeActiveTrackMarker(trackFileName)) {
     trackFile.close();
-    SD.remove(trackFileName);
+    SD_MMC.remove(trackFileName);
     clearActiveTrackMarker();
     sdError = true;
     drawTrackBadge();
@@ -1318,15 +1319,24 @@ void updateAutomaticScreenMode() {
 }
 
 void handleTouch() {
-  const bool down = touch.touched();
   const uint32_t now = millis();
+  static uint32_t lastPollMs = 0;
+  if (now - lastPollMs < TOUCH_POLL_MS) return;
+  lastPollMs = now;
+  int16_t x = 0, y = 0;
+  const TouchState state = readTouch(x, y);
+  if (state == TouchState::Invalid) {
+    // Cancel the gesture on a bus error; never turn failed reads into taps.
+    touchWasDown = false;
+    return;
+  }
+  const bool down = state == TouchState::Pressed;
   static int16_t tapX = 0;
   static int16_t tapY = 0;
 
   if (down && !touchWasDown) {
-    TS_Point p = touch.getPoint();
-    tapX = constrain(map(p.x, TOUCH_X_MIN, TOUCH_X_MAX, 0, 319), 0, 319);
-    tapY = constrain(map(p.y, TOUCH_Y_MIN, TOUCH_Y_MAX, 0, 239), 0, 239);
+    tapX = x;
+    tapY = y;
     touchWasDown = true;
     longPressHandled = false;
     touchStartedMs = now;
@@ -1667,15 +1677,20 @@ void setup() {
   Serial.begin(115200);
   delay(250);
   Serial.println();
-  Serial.println("MotoNav-CYD V1.1.2 Stable");
+  Serial.println("MotoNav V1.1.2 Stable - Freenove FNK0104B");
+
+  // MotoNav has no audio or LED feature; keep the onboard peripherals quiet.
+  pinMode(AUDIO_ENABLE_PIN, OUTPUT);
+  digitalWrite(AUDIO_ENABLE_PIN, LOW);
+  rgbLedWrite(RGB_LED_PIN, 0, 0, 0);
 
   tft.init();
   tft.setRotation(1);
   tft.invertDisplay(true);
 
-  touchSpi.begin(TOUCH_CLK_PIN, TOUCH_MISO_PIN, TOUCH_MOSI_PIN, TOUCH_CS_PIN);
-  touch.begin(touchSpi);
-  touch.setRotation(1);
+  if (!initializeTouch()) {
+    Serial.println("ERROR: FT6336U not responding at I2C address 0x38");
+  }
 
   gnssSerial.begin(GNSS_BAUD, SERIAL_8N1, GNSS_RX_PIN, GNSS_TX_PIN);
   initializeSd();

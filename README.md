@@ -1,6 +1,8 @@
 # MotoNav-CYD
 
-**Open-source GPS motorcycle speedometer, trip computer and GPX logger for the ESP32-2432S028R Cheap Yellow Display.**
+**Open-source GPS motorcycle speedometer, trip computer and GPX logger. The current V1.1.2 source targets the Freenove ESP32-S3 Display FNK0104B.**
+
+See [FNK0104B wiring, build, and upload instructions](docs/FREENOVE_FNK0104B.md). Historical firmware and the `dist/` ZIP target the ESP32-2432S028R CYD. The original CYD documentation below describes those releases.
 
 [![Stable release](https://img.shields.io/badge/stable-v1.1.2-20c997)](firmware/motonav/MotoNav_CYD_V1_1_2_Stable)
 ![ESP32](https://img.shields.io/badge/platform-ESP32-E7352C)
